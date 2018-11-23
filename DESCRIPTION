@@ -1,0 +1,16 @@
+Package: NSmetabolism
+Title: N-Station Stream Metabolism Modelling
+Version: 0.0.0.9000
+Authors@R: 
+    person(given = "Matthew",
+           family = "Talluto",
+           role = c("aut", "cre"),
+           email = "mtalluto@gmail.com")
+Description: Implements a stream metabolism model for estimating gross primary productivity and ecosystem respiration. The model extends common 1- and 2-station models to n stations, with the potential for latent (unobserved) stations.
+License: MIT + file "Licence"
+Encoding: UTF-8
+LazyData: true
+Suggests: 
+    testthat
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 6.1.1
