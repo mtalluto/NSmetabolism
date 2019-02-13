@@ -14,7 +14,7 @@ osat <- function(temp, P) {
 
 	# C*o, the unit standard atmospheric concentration by volume for oxygen; in mg/kg
 	# eqn 31 from Benson and Krause 1984.
-	Cstaro <- exp(1.3874202e2 + (1.572288e5 / tempK) - (6.637149e7 / tempK^2) + 
+	Cstaro <- exp(-1.3874202e2 + (1.572288e5 / tempK) - (6.637149e7 / tempK^2) + 
 				(1.243678e10 / tempK^3) - (8.621061e11 / tempK^4))
 
 	# original equation 25 from Benson and Krause 1980
@@ -69,6 +69,6 @@ pressureFromElevation <- function(elev) {
 	Pb <- 101325 # static pressure
 	Tb <- 288.15 # standard temperature
 	Rs <- 8.31432 # gas constant
-	presPascals <- Pb * (Tb / (Tb - Lb * elevation))^(g * M / (Rs * Lb))
+	presPascals <- Pb * (Tb / (Tb + Lb * elev))^(g * M / (Rs * Lb))
 	presPascals * 9.86923266*10^-6
 }
