@@ -120,7 +120,7 @@ oneStation_DOPredict <- function(initial, times, params, data, dt = 1,
 #' * `logP1` $(W min g^{-1} O_2)$ log(inverse of the slope of a photosynthesis–irradiance curve)
 #' 		 at low light intensity
 #' * `logP2` $(m^2 min g^{-1} O_2)$ log(inverse maximum photosynthesis rate)
-#' * `k600` coefficient of gas exchange for a gas with a Schmidt number of 600; not supported,
+#' * `logk600` coefficient of gas exchange for a gas with a Schmidt number of 600; not supported,
 #' 		currently fixed to 2/(24*60) (see [kT()])
 #' * `logMinusER24_20` log(-1 * daily ecosystem respiration rate), standardized at 20 degrees C
 #' * `logsd` log(Error standard deviation)
@@ -142,7 +142,7 @@ oneStation_DOPredict <- function(initial, times, params, data, dt = 1,
 #' @export
 oneStation_DOlogprob <- function(params, data, prior = list(), ...) {
 	# check for each parameter, assign default priors if not specified
-	trParNames <- c('logP1', 'logP2', 'k600', 'logMinusER24_20', 'logsd')
+	trParNames <- c('logP1', 'logP2', 'logk600', 'logMinusER24_20', 'logsd')
 	parNames <- c('P1', 'P2', 'k600', 'ER24_20', 'sd')
 	for(nm in trParNames) {
 		if(! nm %in% names(prior))
@@ -159,6 +159,7 @@ oneStation_DOlogprob <- function(params, data, prior = list(), ...) {
 	logprob <- sum(dnorm(data$DO[,1], predicted, doParams['sd'], log = TRUE)) + 
 		dnorm(params['logP1'], 0, 10, log = TRUE) + 
 		dnorm(params['logP2'], 0, 10, log = TRUE) + 
+		dnorm(params['logk600'], 0, 10, log = TRUE) + 
 		dnorm(params['logMinusER24_20'], 0, 10, log = TRUE) + 
 		dnorm(params['logsd'], 0, 10, log = TRUE)
 
@@ -180,12 +181,14 @@ oneStation_parTransform <- function(params, reverse = FALSE) {
 		if(is.matrix(params)) {
 			logP1 <- log(params[,'P1'])
 			logP2 <- log(params[,'P2'])
+			logk600 <- log(params[,'k600'])
 			logMinusER24_20 <- log(-1 * params[,'ER24_20'])
 			logsd <- log(params[,'sd'])
 			result <- cbind(logP1, logP2, logMinusER24_20, logsd)
 		} else {
 			logP1 <- log(params['P1'])
 			logP2 <- log(params['P2'])
+			logk600 <- log(params['k600'])
 			logMinusER24_20 <- log(-1 * params['ER24_20'])
 			logsd <- log(params['sd'])
 			result <- c(logP1 = logP1, logP2 = logP2, logMinusER24_20 = logMinusER24_20, 
@@ -195,12 +198,14 @@ oneStation_parTransform <- function(params, reverse = FALSE) {
 		if(is.matrix(params)) {
 			P1 <- exp(params[,'logP1'])
 			P2 <- exp(params[,'logP2'])
+			k600 <- log(params[,'logk600'])
 			ER24_20 <- -1 * exp(params[,'logMinusER24_20'])
 			sd <- exp(params[,'logsd'])
 			result <- cbind(P1, P2, ER24_20, sd)
 		} else {
 			P1 <- exp(params['logP1'])
 			P2 <- exp(params['logP2'])
+			k600 <- log(params['logk600'])
 			ER24_20 <- -1 * exp(params['logMinusER24_20'])
 			sd <- exp(params['logsd'])
 			result <- c(P1, P2, ER24_20, sd)
