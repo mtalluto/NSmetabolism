@@ -21,7 +21,7 @@ light$light <- light$light * 0.0079
 disso$minutes <- (as.integer(disso$timestamp) - as.integer(startTime)) / 60
 light$minutes <- (as.integer(light$timestamp) - as.integer(startTime)) / 60
 
-initParams <- c(P1=69911.063207, P2=220.062287, ER24_20=-5.386056, sd=1)
+initParams <- c(P1=69911.063207, P2=220.062287, k600 = 2/(24*60), ER24_20=-5.386056, sd=1)
 
 test_that("Pressure is computed right from elevation", {
 	expect_equal(pressureFromElevation(0), 1)
@@ -42,7 +42,7 @@ test_that("dDOdt function working for one station", {
 		z = z)
 
 	# dDOdt is negative at night when light == 0; the first point works
-	expect_lt(oneStation_dDOdt(ddo <- disso$minutes[1], disso$DO[1], 
+	expect_lt(ddo <- oneStation_dDOdt(disso$minutes[1], disso$DO[1], 
 		initParams, DOdata), 0)
 	# expect an absolute value less than the max in the data
 	expect_lt(abs(ddo), max(disso$DO))

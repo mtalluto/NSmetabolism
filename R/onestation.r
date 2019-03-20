@@ -10,8 +10,7 @@
 #' 		 light intensity
 #' * `P2` $(m^2 min g^{-1} O_2)$ inverse maximum photosynthesis rate; can be zero to assume
 #' 		  GPP is linear with light intensity instead of saturating
-#' * `k600` coefficient of gas exchange for a gas with a Schmidt number of 600; not supported,
-#' 		currently fixed to 2/(24*60) (see metabolism_functions.r/kT())
+#' * `k600` coefficient of gas exchange for a gas with a Schmidt number of 600 (see [kT()]).
 #' * `ER24_20` daily ecosystem respiration rate, standardized at 20 degrees C
 #' 
 #' `data` is a named list of (constant) data items, including the following:
@@ -24,19 +23,16 @@
 #' 		 dissolved organic matter and nutrient regimes. *Freshw Biol* **62**:582–599. \\
 #'		 Van de Bogert MC et al. 2007. Assessing pelagic and benthic metabolism using free
 #' 		 water measurements. *Limnol. Oceanogr.: Methods* **5**:145–155. \\
-#' 		 Uehlinger, U., et al. 2000. Variability of photosynthesis‐irradiance curves and 
-#' 		 ecosystem respiration in a small river. *Freshw Biol* **44**:493–507.
 #' 
 #' @return Time derivative of dissolved oxygen
 #' @export
 oneStation_dDOdt <- function(t, y, parms, data, return_list=FALSE)
 {
 	# gross primary production; Fuß et al eq 2
-	# Uehlinger et al 2000 eq 3b
-	GPP <- (data$PAR(t) / (parms['P1'] + parms['P2'] * data$PAR(t)))
+	GPP <- gpp(data$PAR(t), parms['P1'], parms['P2'])
 
 	# rearation flux, Van de Bogert et al eqn 4; note that k600 is fixed
-	RF <- kT(data$temp(t)) * (osat(data$temp(t), data$P) - y)
+	RF <- kT(data$temp(t), parms['k600']) * (osat(data$temp(t), data$P) - y)
 
 	# ecosystem respiration; Fuß et al eq 4
 	ER <- (parms['ER24_20'] / (60*24)) * (1.045^(data$temp(t) - 20))
@@ -56,7 +52,7 @@ oneStation_dDOdt <- function(t, y, parms, data, return_list=FALSE)
 #' @param data a list of data for the ode; see details
 #' @param dt Time step for integration; only used if `method == 'euler'`
 #' @param method The integration method to use; default is euler
-
+#' @param gpp Logical, should GPP at each time step be returned as well?
 #' @details Light and temperature time series will be approximated using linear interpolation
 #' 		at the desired time steps
 #' 
@@ -65,8 +61,7 @@ oneStation_dDOdt <- function(t, y, parms, data, return_list=FALSE)
 #' 		 light intensity
 #' * `P2` $(m^2 min g^{-1} O_2)$ inverse maximum photosynthesis rate; can be zero to assume
 #' 		  GPP is linear with light intensity instead of saturating
-#' * `k600` coefficient of gas exchange for a gas with a Schmidt number of 600; not supported,
-#' 		currently fixed to 2/(24*60) (see [kT()])
+#' * `k600` coefficient of gas exchange for a gas with a Schmidt number of 600; (see [kT()])
 #' * `ER24_20` daily ecosystem respiration rate, standardized at 20 degrees C
 #' 
 #' `data` is a named list of (constant) data items, including the following:
@@ -77,7 +72,7 @@ oneStation_dDOdt <- function(t, y, parms, data, return_list=FALSE)
 #' @return Time series of dissolved oxygen concentrations
 #' @export
 oneStation_DOPredict <- function(initial, times, params, data, dt = 1, 
-			method=c('euler', 'lsoda')) {
+			method=c('euler', 'lsoda'), gpp = FALSE) {
 	method <- match.arg(method)
 	if(method == "lsoda" && !(requireNamespace("deSolve")))
 		stop("Package deSolve is required for method lsoda; please install it and try again")
@@ -108,6 +103,9 @@ oneStation_DOPredict <- function(initial, times, params, data, dt = 1,
 			data = dDOData, return_list=TRUE)
 		state <- state[,2]
 	}
+	if(gpp) {
+		state <- cbind(DO = state, GPP = gpp(dDOData$PAR(times), params['P1'], params['P2']))
+	}
 	return(state)
 }
 
@@ -120,8 +118,7 @@ oneStation_DOPredict <- function(initial, times, params, data, dt = 1,
 #' * `logP1` $(W min g^{-1} O_2)$ log(inverse of the slope of a photosynthesis–irradiance curve)
 #' 		 at low light intensity
 #' * `logP2` $(m^2 min g^{-1} O_2)$ log(inverse maximum photosynthesis rate)
-#' * `logk600` coefficient of gas exchange for a gas with a Schmidt number of 600; not supported,
-#' 		currently fixed to 2/(24*60) (see [kT()])
+#' * `logk600` coefficient of gas exchange for a gas with a Schmidt number of 600; (see [kT()])
 #' * `logMinusER24_20` log(-1 * daily ecosystem respiration rate), standardized at 20 degrees C
 #' * `logsd` log(Error standard deviation)
 #' 
@@ -157,11 +154,11 @@ oneStation_DOlogprob <- function(params, data, prior = list(), ...) {
 	predicted <- oneStation_DOPredict(initial, times, doParams, data)
 
 	logprob <- sum(dnorm(data$DO[,1], predicted, doParams['sd'], log = TRUE)) + 
-		dnorm(params['logP1'], 0, 10, log = TRUE) + 
-		dnorm(params['logP2'], 0, 10, log = TRUE) + 
-		dnorm(params['logk600'], 0, 10, log = TRUE) + 
-		dnorm(params['logMinusER24_20'], 0, 10, log = TRUE) + 
-		dnorm(params['logsd'], 0, 10, log = TRUE)
+		dnorm(params['logP1'], prior[['logP1']][1], prior[['logP1']][2], log = TRUE) + 
+		dnorm(params['logP2'], prior[['logP2']][1], prior[['logP2']][2], log = TRUE) + 
+		dnorm(params['logk600'], prior[['logk600']][1], prior[['logk600']][2], log = TRUE) + 
+		dnorm(params['logMinusER24_20'], prior[['logMinusER24_20']][1], prior[['logMinusER24_20']][2], log = TRUE) + 
+		dnorm(params['logsd'], prior[['logsd']][1], prior[['logsd']][2], log = TRUE)
 
 	return(logprob)
 }
@@ -184,33 +181,47 @@ oneStation_parTransform <- function(params, reverse = FALSE) {
 			logk600 <- log(params[,'k600'])
 			logMinusER24_20 <- log(-1 * params[,'ER24_20'])
 			logsd <- log(params[,'sd'])
-			result <- cbind(logP1, logP2, logMinusER24_20, logsd)
+			result <- cbind(logP1, logP2, logk600, logMinusER24_20, logsd)
 		} else {
 			logP1 <- log(params['P1'])
 			logP2 <- log(params['P2'])
 			logk600 <- log(params['k600'])
 			logMinusER24_20 <- log(-1 * params['ER24_20'])
 			logsd <- log(params['sd'])
-			result <- c(logP1 = logP1, logP2 = logP2, logMinusER24_20 = logMinusER24_20, 
-				logsd = logsd)
+			result <- c(logP1 = logP1, logP2 = logP2, logk600 = logk600, 
+				logMinusER24_20 = logMinusER24_20, logsd = logsd)
 		}
 	} else {
 		if(is.matrix(params)) {
 			P1 <- exp(params[,'logP1'])
 			P2 <- exp(params[,'logP2'])
-			k600 <- log(params[,'logk600'])
+			k600 <- exp(params[,'logk600'])
 			ER24_20 <- -1 * exp(params[,'logMinusER24_20'])
 			sd <- exp(params[,'logsd'])
-			result <- cbind(P1, P2, ER24_20, sd)
+			result <- cbind(P1, P2, k600, ER24_20, sd)
 		} else {
 			P1 <- exp(params['logP1'])
 			P2 <- exp(params['logP2'])
-			k600 <- log(params['logk600'])
+			k600 <- exp(params['logk600'])
 			ER24_20 <- -1 * exp(params['logMinusER24_20'])
 			sd <- exp(params['logsd'])
-			result <- c(P1, P2, ER24_20, sd)
-			names(result) <- c("P1", "P2", "ER24_20", "sd")
+			result <- c(P1, P2, k600, ER24_20, sd)
+			names(result) <- c("P1", "P2", "k600", "ER24_20", "sd")
 		}
 	}
 	return(result)
+}
+
+#' Produce posterior simulations for DO curve and GPP
+#' @param params Parameter posterior matrix returned (e.g.) from [DOCalibration()].
+#' @param data Data list as required by [oneStation_DOPredict()].
+#' @return list including predicted DO and GPP at each time step as well as the prediction times.
+oneStation_DOSim <- function(params, data) {
+	initial <- data$DO[1,1]
+	times <- data$DO[,2]
+
+	sims <- apply(params, 1, function(par) {
+		c(oneStation_DOPredict(initial, times, par, data, dt = 1, gpp=TRUE))
+	})
+	list(DO = sims[1:length(times),], GPP = sims[(length(times)+1):nrow(sims),], times = times)
 }

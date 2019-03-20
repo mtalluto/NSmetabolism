@@ -1,3 +1,18 @@
+#' Compute Gross Primary Productivity
+#' @param par light intensity ($W/m^2$)
+#' @param P1 $(W min g^{-1} O_2)$ inverse of the slope of a photosynthesis–irradiance curve at low
+#' 		 light intensity
+#' @param P2 $(m^2 min g^{-1} O_2)$ inverse maximum photosynthesis rate; can be zero to assume
+#' 		  GPP is linear with light intensity instead of saturating
+#' @references Uehlinger, U., et al. 2000. Variability of photosynthesis‐irradiance curves and 
+#' 		 ecosystem respiration in a small river. *Freshw Biol* **44**:493–507.
+#' @return Photosynthetic rate
+#' @export
+gpp <- function(par, P1, P2) {
+	# Uehlinger et al 2000 eq 3b
+	par / (P1 + P2 * par)
+}
+
 #' Compute dissolved oxygen saturation given temperature and pressure
 #' @param temp Water temperature, in degrees C
 #' @param P pressure, in atmospheres
@@ -37,14 +52,15 @@ osat <- function(temp, P) {
 
 #' Compute the temperature-corrected reaction coefficient
 #' @param temp Temperature in degrees C
-#' @param K600 gas exchange coefficient
+#' @param k600 gas exchange coefficient
 #' @references Van de Bogert MC et al. 2007. Assessing pelagic and benthic metabolism using free
 #' 		 water measurements. *Limnol. Oceanogr.: Methods* **5**:145–155. \\
 #' 		 Wanninkhof, R. 1992. Relationship between wind speed and gas exchange over the ocean. 
 #' 		 *Journal of Geophysical Research* **97**:7373.
 #' @return vector of kT values
 #' @keywords internal
-kT <- function(temp, k600 = 2/(24*60)) {
+kT <- function(temp, k600) {
+
 	# compute Schmidt number for oxygen
 	# parameters from Wanninkhof 1992. appendix
 	Sc <- 1800.6 - 120.10 * temp + 3.7818 * temp^2 - 0.047608 * temp^3
