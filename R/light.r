@@ -10,26 +10,44 @@
 #' @param dem_name character; this parameter (and similar name parameters) tell GRASS what names to
 #' use for the rasters needed for the analysis; they must exist in the GRASS location/mapset if
 #' `use_existing == TRUE`.
-#' @param horizon_pars List of arguments for GRASS74's r.horizon; see the GRASS GIS help files if you wish to change the defaults.
+#' @param horizon_pars List of arguments for GRASS74's r.horizon; see the GRASS GIS help files ]
+#' 		if you wish to change the defaults.
+#' @param newSession Boolean, if TRUE a new grass session will be started even if one already
+#'  	exists
+#' @param gisBase character; the location of the GRASS installation 
+#' 		(see WatershedTools::GrassSession)
 
-#' @details Requires an existing installation of GRASS7, as well as the rgrass7 package.
+
+#' @details Requires an existing installation of GRASS7, as well as the rgrass7 package. It is
+#' 		first necessary to run [rgrass7::initGRASS]. Recommended settings for initGRASS include
+#' 		`home = tempdir()` and `SG = SpatialGrid(dem_gridded)`. To produce the gridded DEM
+#' 		from a raster, use:
+#' 			`dem_gridded <- SpatialPoints(dem)`
+#' 			`gridded(dem_gridded) <- TRUE`
 #' 
 #' Note that running the light model can be extremely slow for large study areas and/or high-resolution DEMs and/or long time series. 
-
+#'
 #' It is strongly recommended to use the `output_points` argument to set a list of locations at which to compute the output, otherwise memory usage can be extreme. For rasters, output will be returned for all non-NA cells.
 #' @return A matrix, one row per output point, one column per date/time for computation. Column names are the integer values of the date/time, rownames are the coordinates of the point
-irradiance <- function(dem, output_points, times, timezone, use_existing = TRUE, dem_name = "dem",
+#' @export
+irradiance <- function(dem, output_points, times, timezone, use_existing = FALSE, dem_name = "dem",
 	slope_name = "slope", aspect_name = "aspect", lon_name = "longitude", 
-	horizon_pars = list(step=30, bufferzone=200, maxdistance=5000, horBaseName = "horizonAngle")) 
+	horizon_pars = list(step=30, bufferzone=200, maxdistance=5000, horBaseName = "horizonAngle"),
+	newSession = FALSE, gisBase) 
 {
 	if(!requireNamespace('rgrass7')) 
 		stop("The rgrass7 package must be installed to use this function")
 
-	if(nchar(Sys.getenv("GISRC") == 0))
-		stop("GRASS not initialised; use setup_new_grass() or setup_grass() first")
+	if(!requireNamespace('WatershedTools')) 
+		stop("The WatershedTools package must be installed to use this function")
 
-	if(!use_existing)
+	if(newSession || nchar(Sys.getenv("GISRC")) == 0) {
+		gs <- WatershedTools::GrassSession(dem, gisBase, dem_name, override = TRUE)
+	}
+
+	if(newSession || !use_existing) {
 		setup_irradiance(dem_name, slope_name, aspect_name, lon_name, horizon_pars)
+	}
 
 	## preallocate a large matrix to store results
 	irrad_mat <- matrix(NA, ncol=length(times), nrow=length(output_points))
@@ -41,7 +59,7 @@ irradiance <- function(dem, output_points, times, timezone, use_existing = TRUE,
 		dt <- times[i]
 		dy <- lubridate::yday(dt)
 		tm <- lubridate::hour(dt) + lubridate::minute(dt)/60
-		err <- rgrass7::execGRASS("r.sun", flags=c("overwrite"), elevation=dem_name, 
+		err <- rgrass7::execGRASS("r.sun", flags=c("overwrite", "quiet"), elevation=dem_name, 
 			horizon_basename = horizon_pars$horBaseName, horizon_step = horizon_pars$step, 
 			day=dy, time=tm, glob_rad="irradiance_out", aspect=aspect_name, slope=slope_name, 
 			long=lon_name,  civil_time=timezone)

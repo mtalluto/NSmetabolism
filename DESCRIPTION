@@ -1,6 +1,6 @@
 Package: NSmetabolism
 Title: N-Station Stream Metabolism Modelling
-Version: 0.1.0
+Version: 0.1.0.9002
 Authors@R: 
     person(given = "Matthew",
            family = "Talluto",
@@ -19,6 +19,7 @@ Suggests:
     data.table,
     rgrass7,
     deSolve,
-    mvtnorm
+    mvtnorm,
+    WatershedTools
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 6.1.1

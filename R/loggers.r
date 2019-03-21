@@ -9,6 +9,7 @@
 #'		a data.table or data.frame; all files found in the directory will be collected into a 
 #'		single table.
 #' @return A [data.table::data.table] or `data.frame`
+#' @export
 read_minidot <- function(fname, skip = 3, ...)
 {
 	files <- list.files(fname, full.names=TRUE)
@@ -37,6 +38,7 @@ read_minidot <- function(fname, skip = 3, ...)
 #' @details If \code{fname} is a directory, then \code{pattern} is also required; this allows
 #'   choosing the hobo by name
 #' @return A [data.table::data.table] or `data.frame`
+#' @export
 read_hobo <- function(fname, pattern)
 {
 	if(dir.exists(fname))
