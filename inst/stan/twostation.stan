@@ -58,61 +58,72 @@ functions {
 	real computeER(real temp, real ER24_20) {
 		return (ER24_20 / (60*24)) * (1.045^(temp - 20));
 	}
+
+	real computeAdvection(real inputDO, real outputDO, real discharge, real area, real dx) {
+		inputMass = discharge * inputDO;
+		outputMass = discharge * outputDO;
+		return (-1/area) * (outputMass - inputMass)/dx;
+	}
+
 }
 data {
 	int<lower = 1> nDO; // DO number of observations;
-	int<lower = 1> nTime; // number of integration time steps
-	int<lower = 0> timesDO [nDO]; // time (minutes) of DO
-	int<lower = 0> timesInt [nTime]; // integration times
-	vector<lower = 0> [nTime] PAR;
-	vector [nTime] temp;
-	real<lower=0> z;
-	real pressure;
-	vector<lower=0> [nDO] DO;
+
+	vector<lower=0> [nDO] DO; // DO Observations
+	int<lower = 1> time [nDO]; // time of each DO observation, in minutes
+	int<lower = 1, upper = 2> site [nDO]; // site of DO observations, 1 is upstream, 2 is down
+	vector<lower=0> [2] DOinitial; // initial values for each site
+
+	int<lower = max(time)> maxTime; // latest time at which we want predictions
+	matrix [maxTime, 2] temp;
+	matrix [maxTime, 2] PAR;
+
+	// stream characteristics; should be average of two sites for scalars
+	real <lower = 0> slope;
+	real <lower = 0> velocity;
+	real <lower = 0> pressure;
+	real <lower = 0> discharge; // two station model assumes no lateral input, constant Q
+	real <lower = 0> area; // cross sectional area
+	real <lower = 0> dx;
 }
 parameters {
-	real<lower=0> lP1;
-	real<lower=0> lP2; 
-	real<upper=0> ER24_20;
+	vector<lower=0> [2] lP1;
+	vector<lower=0> [2] lP2; 
+	vector<upper=0> [2] ER24_20;
 	real<lower=0> k600;
 	real<lower=0> sigma;
 }
 transformed parameters {
-	vector [nDO] gpp = rep_vector(0, nDO);
-	vector [nDO] er = rep_vector(0, nDO);
-	vector [nDO] doPredicted; 
+	matrix [maxTime,2] gpp = rep_vector(0, maxTime);
+	matrix [maxTime,2] er = rep_vector(0, maxTime);
+	matrix [maxTime,2] DO_pr; 
 
-	{
-		real state;
-		int DOindex = 2;
-		state = DO[1];
-		doPredicted[1] = DO[1];
-
-		// all t's must be in timesDO
-		// timesInt must start at first timesDO and end at the last
-		// times must be strictly increasing - use all(x == cummax(x))
-		// times must be all integers
-
-		for(i in 2:nTime) {
-			real rf = computeRF(temp[i-1], pressure, state, k600);
-			real gppi = computeGPP(PAR[i-1], lP1, lP2);
-			real eri = computeER(temp[i-1], ER24_20);
-			real ddodt = (gppi + eri + rf)/z;
-			real dt = timesInt[i] - timesInt[i - 1];
-
-			state += ddodt * dt;
-			gpp[DOindex] += gppi;
-			er[DOindex] += eri;
-
-			if(timesInt[i] == timesDO[DOindex]) {
-				doPredicted[DOindex] = state;
-				DOindex += 1;
-			}
+	DO_pr[1,] = DOinitial;
+	for(i in 2:maxTime) {
+		for(j in 1:2) {
+			real ddodt;
+			real rf;
+			real inputDO;
+			if j == 1
+				inputDO = upstreamBoundaryDO;
+			else
+				inputDO = DO_pr[i-1,j-1];
+			adv = computeAdvection(inputDO, DO_pr[i-1,j], discharge, area, dx);
+			rf = computeRF(temp[i-1,j], pressure, DO_pr[i-1,j], k600);
+			gpp[i,j] = computeGPP(PAR[i-1,j], lP1[j], lP2[j]);
+			er[i,j] = computeER(temp[i-1,j], ER24_20[j]);
+			ddodt[j] = adv + (gpp[i,j] + er[i,j] + rf) / z;
+			DO_pr[i,j] = DO_pr[i-1,j] + ddodt * dt;
 		}
 	}
 }
 model {
-	DO ~ normal(doPredicted, sigma);
-	// k600 ~ normal(0.001388889, 0.00001388889);
+	for(i in 1:nDO) {
+		DO[i] ~ normal(DO_pr[time[i], site[i]], sigma);
+	}
+
+	k600 ~ normal((1162 * pow(slope, 0.77) * pow(velocity, 0.85))/(24*60), 0.0001462944 + 0.0012564499 * slope + 0.0124307051 * velocity + 0.0961094198 * slope * velocity);
+	lP1 ~ normal(9, 1);
+	ER24_20 ~ normal(0, 10);
 }
 
