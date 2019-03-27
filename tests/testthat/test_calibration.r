@@ -15,6 +15,7 @@ teeZero <- disso$timestamp[which.min(disso$timestamp)]
 
 ## approximate conversion for light
 ## from http://bccp.berkeley.edu/o/Academy/workshop08/08%20PDFs/Inv_Square_Law.pdf
+## https://physics.stackexchange.com/questions/135618/rm-lux-and-w-m2-relationship
 lightdat$light <- lightdat$light * 0.0079
 
 # add a time column in elapsed minutes
