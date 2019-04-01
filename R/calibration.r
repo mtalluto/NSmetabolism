@@ -5,6 +5,7 @@
 #' @param method Calibration method; either `laplace` approximation or `mcmc` (not implemented)
 #' @param nsamples The number of posterior samples to return
 #' @param prior Priors for the function chosen
+#' @param ... Additional arguments to pass to the sampler
 #' 
 #' @details The `model` parameter selects which model will be used; one of:
 #' * onestation: The one-station model from Fuß et al 2017; params/data from
@@ -15,14 +16,14 @@
 #' 		 dissolved organic matter and nutrient regimes. *Freshw Biol* **62**:582–599. 
 #' @return A matrix of posterior samples of all parameters
 DOCalibration <- function(initial, data, model = c('onestation', 'twostation', 'nstation'), 
-			method = c('laplace', 'stan'), nsamples = 1000, prior = list(), dt = 1) {
+			method = c('laplace', 'stan'), nsamples = 1000, prior = list(), dt = 1, ...) {
 	model <- match.arg(model)
 	method <- match.arg(method)
 
 	if(method == 'laplace') {
 		calib <- calibLaplace(initial, data, model, nsamples, prior)
 	} else if(method == 'stan') {
-		calib <- calibStan(data, nsamples, model, dt)
+		calib <- calibStan(data, nsamples, model, dt, ...)
 	} else {
 		stop("Method ", method, " is not implemented yet")
 	}
@@ -67,8 +68,8 @@ calibLaplace <- function(initial, data, model, nsamples, prior) {
 }
 
 #' @internal
-calibStan <- function(data, nsamples, model, dt) {
-	if(!requireNamespace("rstan"))
+calibStan <- function(data, nsamples, model, dt, ...) {
+	if(!require("rstan"))
 		stop("Method 'stan' requires the rstan package; please install it and try again")
 
 	if(model == 'onestation') {
@@ -77,39 +78,34 @@ calibStan <- function(data, nsamples, model, dt) {
 		stop("Model ", model, " is not implemented yet")
 	}
 
-	stanDat <- list(
-		nDO = nrow(data$DO),
-		timesDO = data$DO$minutes,
-		dt = dt,
-		z = data$z,
-		pressure = data$P,
-		DO = data$DO$DO,
-		slope = data$slope,
-		velocity = data$velocity
-	)
+	if(is.list(data)) {
+		stanDat <- data
+		stanDat$dt = dt
+	} else {
+		stanDat <- list(
+			nDO = nrow(data$DO),
+			timesDO = data$DO$minutes,
+			dt = dt,
+			z = data$z,
+			pressure = data$P,
+			DO = data$DO$DO,
+			slope = data$slope,
+			velocity = data$velocity
+		)		
+		parFun <- approxfun(x = data$PAR[,2], y = data$PAR[,1], rule = 2)
+		tempFun = approxfun(x = data$temp[,2], y = data$temp[,1], rule = 2)
 
-	parFun <- approxfun(x = data$PAR[,2], y = data$PAR[,1], rule = 2)
-	tempFun = approxfun(x = data$temp[,2], y = data$temp[,1], rule = 2)
+		stanDat$timesInt <- seq(stanDat$timesDO[1], stanDat$timesDO[length(stanDat$timesDO)], dt)
+		stanDat$nTime <- length(stanDat$timesInt)
+		stanDat$PAR <- parFun(stanDat$timesInt)
+		stanDat$temp <- tempFun(stanDat$timesInt)
+		if(any(stanDat$timesDO != as.integer(stanDat$timesDO)) | dt != as.integer(dt))
+			stop("Non-integer times are not supported; please ensure that dt and all times are integers")
 
-	stanDat$timesInt <- seq(stanDat$timesDO[1], stanDat$timesDO[length(stanDat$timesDO)], dt)
-	stanDat$nTime <- length(stanDat$timesInt)
-	stanDat$PAR <- parFun(stanDat$timesInt)
-	stanDat$temp <- tempFun(stanDat$timesInt)
+		if(!all(stanDat$timesDO %in% stanDat$timesInt))
+			stop("Please choose dt such that seq(times[1], times[length(times)], dt) includes all entries in times")
+	}
 
-	# check the data
-	if(stanDat$timesDO[1] != 0)
-		stop("First DO observation time must be 0")
-
-	if(any(stanDat$timesDO != cummax(stanDat$timesDO)))
-		stop("DO data must be a time series, so times must be strictly increasing")
-
-	if(any(stanDat$timesDO != as.integer(stanDat$timesDO)) | dt != as.integer(dt))
-		stop("Non-integer times are not supported; please ensure that dt and all times are integers")
-
-	if(!all(stanDat$timesDO %in% stanDat$timesInt))
-		stop("Please choose dt such that seq(times[1], times[length(times)], dt) includes all entries in times")
-
-
-	fit <- rstan::stan(file, data = stanDat, iter=nsamples)
+	fit <- rstan::stan(file, data = stanDat, iter=nsamples, ...)
 	return(fit)
 }

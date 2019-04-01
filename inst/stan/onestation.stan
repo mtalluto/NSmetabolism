@@ -36,24 +36,20 @@ functions {
 		return k600 * (Sc / 600)^-0.5;
 	}
 
-	real computeGPP(real PAR, real lP1) {
-		// Uehlinger et al 2000 eq 3b
-		return exp(log(PAR) - lP1);
-	}
-	// real computeGPP(real PAR, real lP1, real lP2) {
-	// 	real lGPP;
-	// 	if(PAR == 0)
-	// 		return 0;
+	real computeGPP(real PAR, real lP1, real lP2) {
+		real lGPP;
+		if(PAR == 0)
+			return 0;
 
-	// 	// Uehlinger et al 2000 eq 3b
-	// 	// GPP = PAR/(P1 + P2 * PAR)
-	// 	if(lP2 == 0) {
-	// 		lGPP = log(PAR) - lP1;
-	// 	} else {
-	// 		lGPP = log(PAR) - log_sum_exp(lP1, lP2 + log(PAR));
-	// 	}
-	// 	return exp(lGPP);
-	// }
+		// Uehlinger et al 2000 eq 3b
+		// GPP = PAR/(P1 + P2 * PAR)
+		if(lP2 == 0) {
+			lGPP = log(PAR) - lP1;
+		} else {
+			lGPP = log(PAR) - log_sum_exp(lP1, lP2 + log(PAR));
+		}
+		return exp(lGPP);
+	}
 
 	real computeRF(real temp, real pressure, real DO, real k600) {
 		return kT(temp, k600) * (osat(temp, pressure) - DO);
@@ -65,57 +61,53 @@ functions {
 }
 data {
 	int<lower = 1> nDO; // DO number of observations;
-	int<lower = 1> nTime; // number of integration time steps
-	int<lower = 0> timesDO [nDO]; // time (minutes) of DO
-	int<lower = 0> timesInt [nTime]; // integration times
-	vector<lower = 0> [nTime] PAR;
-	vector [nTime] temp;
-	real<lower=0> z;
-	real pressure;
-	vector<lower=0> [nDO] DO;
-	real slope;
-	real velocity;
+
+	vector<lower=0> [nDO] DO; // DO Observations
+	int<lower = 1> time [nDO]; // time of each DO observation, in minutes
+	real<lower=0> DOinitial; // initial value DO
+
+	int<lower = max(time)> maxTime; // latest time at which we want predictions
+	vector [maxTime] temp;
+	vector [maxTime] PAR;
+
+	// stream characteristics; should be average of two sites for scalars
+	real <lower = 0> slope;
+	real <lower = 0> velocity;
+	real <lower = 0> pressure;
+	real <lower = 0> z; // depth
+	real <lower = 0> dt; // length (in minutes) of a single time step
 }
+
 parameters {
 	real<lower=0> lP1;
-	// real<lower=0> lP2; 
+	real<lower=0> lP2; 
 	real<upper=0> ER24_20;
 	real<lower=0> k600;
 	real<lower=0> sigma;
 }
 transformed parameters {
-	vector [nDO] gpp = rep_vector(0, nDO);
-	vector [nDO] er = rep_vector(0, nDO);
-	vector [nDO] doPredicted; 
+	vector [maxTime] gpp = rep_vector(0, maxTime);
+	vector [maxTime] er = rep_vector(0, maxTime);
+	vector [maxTime] DO_pr; 
 
-	{
-		real state;
-		int DOindex = 2;
-		state = DO[1];
-		doPredicted[1] = DO[1];
-
-		for(i in 2:nTime) {
-			real rf = computeRF(temp[i-1], pressure, state, k600);
-			real gppi = computeGPP(PAR[i-1], lP1);
-			real eri = computeER(temp[i-1], ER24_20);
-			real ddodt = (gppi + eri + rf)/z;
-			real dt = timesInt[i] - timesInt[i - 1];
-
-			state += ddodt * dt;
-			gpp[DOindex] += gppi;
-			er[DOindex] += eri;
-
-			if(timesInt[i] == timesDO[DOindex]) {
-				doPredicted[DOindex] = state;
-				DOindex += 1;
-			}
-		}
+	DO_pr[1] = DOinitial;
+	for(i in 2:maxTime) {
+		real ddodt;
+		real rf;
+		rf = computeRF(temp[i-1], pressure, DO_pr[i-1], k600);
+		gpp[i] = computeGPP(PAR[i-1], lP1, lP2);
+		er[i] = computeER(temp[i-1], ER24_20);
+		ddodt = (gpp[i] + er[i] + rf) / z;
+		DO_pr[i] = DO_pr[i-1] + ddodt * dt;
 	}
 }
 model {
-	DO ~ normal(doPredicted, sigma);
+	for(i in 1:nDO) {
+		DO[i] ~ normal(DO_pr[time[i]], sigma);
+	}
 	k600 ~ normal((1162 * pow(slope, 0.77) * pow(velocity, 0.85))/(24*60), 0.0001462944 + 0.0012564499 * slope + 0.0124307051 * velocity + 0.0961094198 * slope * velocity);
 	lP1 ~ normal(9, 1);
+	lP2 ~ normal(9, 1);
 	ER24_20 ~ normal(0, 10);
 }
 
