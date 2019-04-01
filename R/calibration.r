@@ -32,7 +32,7 @@ DOCalibration <- function(initial, data, model = c('onestation', 'twostation', '
 }
 
 
-#' @internal
+#' @keywords internal
 calibLaplace <- function(initial, data, model, nsamples, prior) {
 	if(!requireNamespace("mvtnorm"))
 		stop("Method 'laplace' requires the mvtnorm package; please install it and try again")
@@ -67,7 +67,7 @@ calibLaplace <- function(initial, data, model, nsamples, prior) {
 	list(params = samples, DO = sims$DO, GPP = sims$GPP, time = sims$times, fit = fit)
 }
 
-#' @internal
+#' keywords @internal
 calibStan <- function(data, nsamples, model, dt, ...) {
 	if(!require("rstan"))
 		stop("Method 'stan' requires the rstan package; please install it and try again")

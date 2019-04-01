@@ -4,10 +4,11 @@
 \alias{irradiance}
 \title{Produce a model of irradiance for an entire study area or selected control points}
 \usage{
-irradiance(dem, output_points, times, timezone, use_existing = TRUE,
+irradiance(dem, output_points, times, timezone, use_existing = FALSE,
   dem_name = "dem", slope_name = "slope", aspect_name = "aspect",
   lon_name = "longitude", horizon_pars = list(step = 30, bufferzone =
-  200, maxdistance = 5000, horBaseName = "horizonAngle"))
+  200, maxdistance = 5000, horBaseName = "horizonAngle"),
+  newSession = FALSE, gisBase)
 }
 \arguments{
 \item{dem}{A \link[sp:SpatialGridDataFrame]{sp::SpatialGridDataFrame} or \link[raster:RasterLayer]{raster::RasterLayer} object giving the digital
@@ -26,7 +27,14 @@ rasters will be used, if FALSE then they will be recomputed}
 use for the rasters needed for the analysis; they must exist in the GRASS location/mapset if
 \code{use_existing == TRUE}.}
 
-\item{horizon_pars}{List of arguments for GRASS74's r.horizon; see the GRASS GIS help files if you wish to change the defaults.}
+\item{horizon_pars}{List of arguments for GRASS74's r.horizon; see the GRASS GIS help files ]
+if you wish to change the defaults.}
+
+\item{newSession}{Boolean, if TRUE a new grass session will be started even if one already
+exists}
+
+\item{gisBase}{character; the location of the GRASS installation
+(see WatershedTools::GrassSession)}
 }
 \value{
 A matrix, one row per output point, one column per date/time for computation. Column names are the integer values of the date/time, rownames are the coordinates of the point
@@ -35,8 +43,14 @@ A matrix, one row per output point, one column per date/time for computation. Co
 Produce a model of irradiance for an entire study area or selected control points
 }
 \details{
-Requires an existing installation of GRASS7, as well as the rgrass7 package.
+Requires an existing installation of GRASS7, as well as the rgrass7 package. It is
+first necessary to run \link[rgrass7:initGRASS]{rgrass7::initGRASS}. Recommended settings for initGRASS include
+\code{home = tempdir()} and \code{SG = SpatialGrid(dem_gridded)}. To produce the gridded DEM
+from a raster, use:
+\code{dem_gridded <- SpatialPoints(dem)}
+\code{gridded(dem_gridded) <- TRUE}
 
 Note that running the light model can be extremely slow for large study areas and/or high-resolution DEMs and/or long time series.
+
 It is strongly recommended to use the \code{output_points} argument to set a list of locations at which to compute the output, otherwise memory usage can be extreme. For rasters, output will be returned for all non-NA cells.
 }

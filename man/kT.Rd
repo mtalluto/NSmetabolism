@@ -4,12 +4,12 @@
 \alias{kT}
 \title{Compute the temperature-corrected reaction coefficient}
 \usage{
-kT(temp, k600 = 2/(24 * 60))
+kT(temp, k600)
 }
 \arguments{
 \item{temp}{Temperature in degrees C}
 
-\item{K600}{gas exchange coefficient}
+\item{k600}{gas exchange coefficient}
 }
 \value{
 vector of kT values

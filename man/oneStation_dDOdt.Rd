@@ -30,8 +30,7 @@ Time derivative of DO concentration
 light intensity
 \item \code{P2} $(m^2 min g^{-1} O_2)$ inverse maximum photosynthesis rate; can be zero to assume
 GPP is linear with light intensity instead of saturating
-\item \code{k600} coefficient of gas exchange for a gas with a Schmidt number of 600; not supported,
-currently fixed to 2/(24*60) (see metabolism_functions.r/kT())
+\item \code{k600} coefficient of gas exchange for a gas with a Schmidt number of 600 (see \code{\link[=kT]{kT()}}).
 \item \code{ER24_20} daily ecosystem respiration rate, standardized at 20 degrees C
 }
 
@@ -45,9 +44,7 @@ currently fixed to 2/(24*60) (see metabolism_functions.r/kT())
 }
 \references{
 Fuß, T. et al. (2017). Land use controls stream ecosystem metabolism by shifting
-dissolved organic matter and nutrient regimes. \emph{Freshw Biol} \strong{62}:582–599. \
+dissolved organic matter and nutrient regimes. \emph{Freshw Biol} \strong{62}:582–599. \newline
 Van de Bogert MC et al. 2007. Assessing pelagic and benthic metabolism using free
-water measurements. \emph{Limnol. Oceanogr.: Methods} \strong{5}:145–155. \
-Uehlinger, U., et al. 2000. Variability of photosynthesis‐irradiance curves and
-ecosystem respiration in a small river. \emph{Freshw Biol} \strong{44}:493–507.
+water measurements. \emph{Limnol. Oceanogr. Methods} \strong{5}:145–155.
 }

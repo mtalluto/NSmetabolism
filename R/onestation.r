@@ -20,9 +20,9 @@
 #' * `z`    Depth, in meters
 #' 
 #' @references Fuß, T. et al. (2017). Land use controls stream ecosystem metabolism by shifting
-#' 		 dissolved organic matter and nutrient regimes. *Freshw Biol* **62**:582–599. \\
+#' 		 dissolved organic matter and nutrient regimes. *Freshw Biol* **62**:582–599. \newline
 #'		 Van de Bogert MC et al. 2007. Assessing pelagic and benthic metabolism using free
-#' 		 water measurements. *Limnol. Oceanogr.: Methods* **5**:145–155. \\
+#' 		 water measurements. *Limnol. Oceanogr. Methods* **5**:145–155. 
 #' 
 #' @return Time derivative of dissolved oxygen
 #' @export

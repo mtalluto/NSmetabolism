@@ -5,7 +5,8 @@
 \title{Calibrate a dissolved oxygen model}
 \usage{
 DOCalibration(initial, data, model = c("onestation", "twostation",
-  "nstation"), method = c("laplace", "mcmc"), nsamples = 1000)
+  "nstation"), method = c("laplace", "stan"), nsamples = 1000,
+  prior = list(), dt = 1, ...)
 }
 \arguments{
 \item{initial}{a named vector with one element per parameter giving the initial values}
@@ -17,6 +18,10 @@ DOCalibration(initial, data, model = c("onestation", "twostation",
 \item{method}{Calibration method; either \code{laplace} approximation or \code{mcmc} (not implemented)}
 
 \item{nsamples}{The number of posterior samples to return}
+
+\item{prior}{Priors for the function chosen}
+
+\item{...}{Additional arguments to pass to the sampler}
 }
 \value{
 A matrix of posterior samples of all parameters

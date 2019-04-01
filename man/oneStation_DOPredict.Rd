@@ -5,7 +5,7 @@
 \title{Predict a time series of dissolved oxygen concentration}
 \usage{
 oneStation_DOPredict(initial, times, params, data, dt = 1,
-  method = c("euler", "lsoda"))
+  method = c("euler", "lsoda"), gpp = FALSE)
 }
 \arguments{
 \item{initial}{initial dissolved oxygen concentration}
@@ -19,6 +19,8 @@ oneStation_DOPredict(initial, times, params, data, dt = 1,
 \item{dt}{Time step for integration; only used if \code{method == 'euler'}}
 
 \item{method}{The integration method to use; default is euler}
+
+\item{gpp}{Logical, should GPP at each time step be returned as well?}
 }
 \value{
 Time series of dissolved oxygen concentrations
@@ -36,8 +38,7 @@ at the desired time steps
 light intensity
 \item \code{P2} $(m^2 min g^{-1} O_2)$ inverse maximum photosynthesis rate; can be zero to assume
 GPP is linear with light intensity instead of saturating
-\item \code{k600} coefficient of gas exchange for a gas with a Schmidt number of 600; not supported,
-currently fixed to 2/(24*60) (see \code{\link[=kT]{kT()}})
+\item \code{k600} coefficient of gas exchange for a gas with a Schmidt number of 600; (see \code{\link[=kT]{kT()}})
 \item \code{ER24_20} daily ecosystem respiration rate, standardized at 20 degrees C
 }
 
