@@ -15,6 +15,7 @@
 #' @references Fuß, T. et al. (2017). Land use controls stream ecosystem metabolism by shifting
 #' 		 dissolved organic matter and nutrient regimes. *Freshw Biol* **62**:582–599. 
 #' @return A matrix of posterior samples of all parameters
+#' @export
 DOCalibration <- function(initial, data, model = c('onestation', 'twostation', 'nstation'), 
 			method = c('laplace', 'stan'), nsamples = 1000, prior = list(), dt = 1, ...) {
 	model <- match.arg(model)
