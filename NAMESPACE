@@ -2,10 +2,12 @@
 
 export(DOCalibration)
 export(gpp)
+export(hPaToAtm)
 export(irradiance)
 export(oneStation_DOPredict)
 export(oneStation_DOlogprob)
 export(oneStation_dDOdt)
+export(pressureCorrection)
 export(pressureFromElevation)
 export(read_hobo)
 export(read_minidot)

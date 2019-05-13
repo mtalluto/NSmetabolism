@@ -73,9 +73,9 @@ kT <- function(temp, k600) {
 }
 
 
-#' Compute pressure in atmospheres elevation
+#' Compute pressure (in hPa) from elevation
 #' @param elev Vector of elevations
-#' @return Pressure for given elevations
+#' @return Pressure for given elevations in hPa
 #' @export
 pressureFromElevation <- function(elev) {
 	# barometric eqn
@@ -86,5 +86,33 @@ pressureFromElevation <- function(elev) {
 	Tb <- 288.15 # standard temperature
 	Rs <- 8.31432 # gas constant
 	presPascals <- Pb * (Tb / (Tb + Lb * elev))^(g * M / (Rs * Lb))
-	presPascals * 9.86923266*10^-6
+	presPascals / 100
+}
+
+#' Convert hPa to atmospheres
+#' @param P Vector of pressures (in hPa)
+#' @return Pressure in atm
+#' @export
+hPaToAtm <- function(P) {
+	P * 9.86923266e-4
+}
+
+#' Compute pressure at a given elevation from a calibration point
+#' @param elev Vector of elevations (in meters)
+#' @param calibE Elevaiton of calibration point
+#' @param calibP vector of pressure observations (e.g., a time series)
+#' @return Pressure in hPa; in the form of a matrix with elevation as rows and pressure as columns
+#' @export
+pressureCorrection <- function(elev, calibE, calibP, units = c("hPa", "Pa")) {
+	units <- match.arg(units)
+	if(units == "hPa")
+		calibP <- calibP * 100
+
+	a <- 2.25577e-5
+	b <- 5.25588
+	seaLevelP <- calibP / ((1 - a * calibE)^b)
+
+	newP <- t(sapply(elev, function(e) seaLevelP * (1 - a * e)^b))
+	rownames(newP) <- elev
+	newP / 100
 }

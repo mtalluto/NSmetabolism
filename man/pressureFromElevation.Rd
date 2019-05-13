@@ -2,7 +2,7 @@
 % Please edit documentation in R/metabolism_functions.r
 \name{pressureFromElevation}
 \alias{pressureFromElevation}
-\title{Compute pressure in atmospheres elevation}
+\title{Compute pressure (in hPa) from elevation}
 \usage{
 pressureFromElevation(elev)
 }
@@ -10,8 +10,8 @@ pressureFromElevation(elev)
 \item{elev}{Vector of elevations}
 }
 \value{
-Pressure for given elevations
+Pressure for given elevations in hPa
 }
 \description{
-Compute pressure in atmospheres elevation
+Compute pressure (in hPa) from elevation
 }

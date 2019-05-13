@@ -75,37 +75,40 @@ calibStan <- function(data, nsamples, model, dt, ...) {
 
 	if(model == 'onestation') {
 		file <- system.file("stan/onestation.stan", package="NSmetabolism")
+		# if(is.list(data)) {
+			stanDat <- data
+			stanDat$dt = dt
+		# } else {
+		# 	stanDat <- list(
+		# 		nDO = nrow(data$DO),
+		# 		timesDO = data$DO$minutes,
+		# 		dt = dt,
+		# 		z = data$z,
+		# 		pressure = data$P,
+		# 		DO = data$DO$DO,
+		# 		slope = data$slope,
+		# 		velocity = data$velocity
+		# 	)		
+		# 	parFun <- approxfun(x = data$PAR[,2], y = data$PAR[,1], rule = 2)
+		# 	tempFun = approxfun(x = data$temp[,2], y = data$temp[,1], rule = 2)
+
+		# 	stanDat$timesInt <- seq(stanDat$timesDO[1], stanDat$timesDO[length(stanDat$timesDO)], dt)
+		# 	stanDat$nTime <- length(stanDat$timesInt)
+		# 	stanDat$PAR <- parFun(stanDat$timesInt)
+		# 	stanDat$temp <- tempFun(stanDat$timesInt)
+		# 	if(any(stanDat$timesDO != as.integer(stanDat$timesDO)) | dt != as.integer(dt))
+		# 		stop("Non-integer times are not supported; please ensure that dt and all times are integers")
+
+		# 	if(!all(stanDat$timesDO %in% stanDat$timesInt))
+		# 		stop("Please choose dt such that seq(times[1], times[length(times)], dt) includes all entries in times")
+	} else if(model == 'twostation') {
+		file <- system.file("stan/twostation.stan", package="NSmetabolism")
+		stanDat <- data
+		stanDat$dt = dt
 	} else {
 		stop("Model ", model, " is not implemented yet")
 	}
 
-	if(is.list(data)) {
-		stanDat <- data
-		stanDat$dt = dt
-	} else {
-		stanDat <- list(
-			nDO = nrow(data$DO),
-			timesDO = data$DO$minutes,
-			dt = dt,
-			z = data$z,
-			pressure = data$P,
-			DO = data$DO$DO,
-			slope = data$slope,
-			velocity = data$velocity
-		)		
-		parFun <- approxfun(x = data$PAR[,2], y = data$PAR[,1], rule = 2)
-		tempFun = approxfun(x = data$temp[,2], y = data$temp[,1], rule = 2)
-
-		stanDat$timesInt <- seq(stanDat$timesDO[1], stanDat$timesDO[length(stanDat$timesDO)], dt)
-		stanDat$nTime <- length(stanDat$timesInt)
-		stanDat$PAR <- parFun(stanDat$timesInt)
-		stanDat$temp <- tempFun(stanDat$timesInt)
-		if(any(stanDat$timesDO != as.integer(stanDat$timesDO)) | dt != as.integer(dt))
-			stop("Non-integer times are not supported; please ensure that dt and all times are integers")
-
-		if(!all(stanDat$timesDO %in% stanDat$timesInt))
-			stop("Please choose dt such that seq(times[1], times[length(times)], dt) includes all entries in times")
-	}
 
 	fit <- rstan::stan(file, data = stanDat, iter=nsamples, ...)
 	return(fit)

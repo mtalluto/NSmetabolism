@@ -60,8 +60,8 @@ functions {
 	}
 
 	real computeAdvection(real inputDO, real outputDO, real discharge, real area, real dx) {
-		inputMass = discharge * inputDO;
-		outputMass = discharge * outputDO;
+		real inputMass = discharge * inputDO;
+		real outputMass = discharge * outputDO;
 		return (-1/area) * (outputMass - inputMass)/dx;
 	}
 
@@ -85,6 +85,8 @@ data {
 	real <lower = 0> discharge; // two station model assumes no lateral input, constant Q
 	real <lower = 0> area; // cross sectional area
 	real <lower = 0> dx;
+	real <lower = 0> z;
+	real <lower = 0> dt;
 }
 parameters {
 	vector<lower=0> [2] lP1;
@@ -94,25 +96,30 @@ parameters {
 	real<lower=0> sigma;
 }
 transformed parameters {
-	matrix [maxTime,2] gpp = rep_vector(0, maxTime);
-	matrix [maxTime,2] er = rep_vector(0, maxTime);
+	matrix [maxTime,2] gpp = rep_matrix(0, maxTime, 2);
+	matrix [maxTime,2] er = rep_matrix(0, maxTime, 2);
 	matrix [maxTime,2] DO_pr; 
 
-	DO_pr[1,] = DOinitial;
+	DO_pr[1,1] = DOinitial[1];
+	DO_pr[1,2] = DOinitial[2];
 	for(i in 2:maxTime) {
 		for(j in 1:2) {
 			real ddodt;
 			real rf;
 			real inputDO;
-			if j == 1
-				inputDO = upstreamBoundaryDO;
+			real adv;
+
+			if(j == 1)
+			// NOTE - input concentration for upstream site is just the concentration
+			// of the upstream site from the time period before
+				inputDO = DO_pr[i-1,j];
 			else
 				inputDO = DO_pr[i-1,j-1];
 			adv = computeAdvection(inputDO, DO_pr[i-1,j], discharge, area, dx);
 			rf = computeRF(temp[i-1,j], pressure, DO_pr[i-1,j], k600);
 			gpp[i,j] = computeGPP(PAR[i-1,j], lP1[j], lP2[j]);
 			er[i,j] = computeER(temp[i-1,j], ER24_20[j]);
-			ddodt[j] = adv + (gpp[i,j] + er[i,j] + rf) / z;
+			ddodt = adv + (gpp[i,j] + er[i,j] + rf) / z;
 			DO_pr[i,j] = DO_pr[i-1,j] + ddodt * dt;
 		}
 	}
