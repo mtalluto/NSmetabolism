@@ -15,11 +15,28 @@ functions {
 
 	}
 
-	real idw_river () {
+	// for all vectors, 1 is downstream, 2:n are upstream
+	// vals: measured values
+	// nbQ: discharge of neighbor sties
+	// dist: distance along river to sites
+	// Q: discharge of focal site
+	real idw_river (vector [3] vals, vector [3] nbQ, vector[3] dist, real Q) {
+		vector[3] QR; // discharge ratio to use; should always have upstream in numerator
+		vector[3] weights;
+		for(i in 1:3) {
+			if(dist[i] == 0)
+				return(vals[i])
+			QR[i] = nbQ / Q;
+		}
+		QR[1] = 1/QR[1]; // correct the downstream site to put upstream on numerator
 
+		weights = QR / pow(dist, 2);
+		weights = weights / sum(weights);
+		return sum(vals * weights);
 	}
 
-	real approx() {
+	// performs nearest neighbor linear interpolation
+	real approx(real x1, real y1, real x2, real y2, real xnew) {
 
 	}
 
@@ -43,6 +60,17 @@ data{
 	vector<lower=0> [nSites] dx;
 	vector<lower=0> [nSites] depth;
 	int<lower=1, upper = nReaches> reachID [nSites];
+
+	// measured variables and variables for keeping track of them
+	int <lower = 1> nTempSites;
+	// for water temperature, for each pixel/site, we keep track of 2 upstream neigbors 
+	// (indices 2:3), and a downstream neighbor (index 1); we also track the distance to each
+	int <lower = 1, upper = nTempSites> waterTempNbs [nSites, 3] ; 
+	matrix <lower = 1, upper = nTempSites> [nSites, 3] waterTempDist;
+	// for each site where temperature is measured, we have the measurement, as well
+	// as that site's pixelID so we can get back to discharge and other data
+	int <lower =1 , upper = nSites> waterTempSiteIDs [nTempSites]; // pointer back to pixelID
+	matrix [nTempSites, maxTime] waterTempMeasured;
 	
 	// upstream sites; first column is for the main (larger) upstream pixel
 	// second column will only be used for confluences; weight should be 0 for non-confluences
@@ -76,11 +104,33 @@ transformed parameters {
 			real rf;
 			real inputDO;
 			real adv;
-			// real waterTemp = idw_river(...);
-			// real pressure = idw(...);
-			// real light = approx(...);
+			real waterTemp;
+			real pressure;
+			real light;
 			int reach = reachID[si];
+			vector [2] usMeasuredWaterTemp;
+			vector [2] usWaterTempQ;
+			real dsMeasuredWaterTemp;
 
+			// deal with water temperature interpolation
+			// this is a somewhat complicated index lookup so break out the indies a bit
+			// for clarity
+			{
+				int nbIDs [3] = waterTempNbs[si, ];
+				int nbPixIDs = waterTempSiteIDs[nbIDs];
+				waterTemp = idw_river(waterTempMeasured[nbIDs, ti], Q[nbPixIDs], 
+					waterTempDist[si, ], Q[si]);
+			}
+
+			// deal with pressure interpolation; same deal as water temp; the indices get complex
+			{
+				// pressure = idw(...);
+			}
+
+			// deal with light interpolation; same deal as water temp; the indices get complex
+			{
+				// light = approx(...);
+			}
 
 			// get input DO from upstream pixel(s)
 			// note that stan is somewhat inflexible
