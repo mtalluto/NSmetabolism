@@ -22,6 +22,11 @@ functions {
 
 	}
 
+	// perform inverse distance weighting with a correction for elevation
+	// vals: input elevation; assumed to be at 0m elevation
+	// dist: distance from focal point to vals
+	// elevOut: elevation of focal site
+	// n: number of pressure observations
 	real idw_pressure(vector vals, vector dist, real elevOut, int n) {
 		vector weight = 1/pow(dist, 2);
 		for(i in 1:n) {
@@ -35,8 +40,16 @@ functions {
 
 	}
 
-	real approx() {
-
+	// simple linear interpolation between two points
+	// x: two x points
+	// y: two y points
+	// xnew: location of the point to interpolate
+	real approx(vector x, vector y, xnew) {
+		if(xnew == x[1])
+			return(y[1]);
+		if(xnew == x[2])
+			return(y[2]);
+		return(y[1] + (xnew - x[1]) * ((y[2] - y[1])/(x[2] - x[1])));
 	}
 
 	real computeAdvection(real inputDO, real outputDO, real Q, real area, real dx) {
@@ -78,6 +91,11 @@ data {
 	matrix<lower = 0> [nPressure, maxTime] pressure;
 	vector [nPressure] prElev;
 
+	// data relating to light
+	int <lower = 1> nLightTimes;
+	matrix [nSites, nLightTimes] light;
+	vector [nLightTimes] lightTimes;
+
 }
 transformed data {
 	matrix <lower = 0> [nPressure, maxTime] pressureSeaLevel;
@@ -106,24 +124,31 @@ transformed parameters {
 	matrix [nSites, maxTime] gpp = rep_matrix(0, nSites, maxTime);
 	matrix [nSites, maxTime] er = rep_matrix(0, nSites, maxTime);
 	matrix [nSites, maxTime] DOpr; 
+	int ltTimeIndex = 1;
 
 	for(si in 1:nSites) {
 		DOpr[si,1] = DOinitial[si];
 	}
 
 	for(ti in 2:maxTime) {
+		if(lightTimes[ltTimeIndex] > ti)
+			ltTimeIndex += 1;
 		for(si in 1:nSites) {
 			real ddodt;
 			real rf;
 			real inputDO;
 			real adv;
 			real siPressure;
+			real siLight;
 			// real waterTemp = idw_river(...);
-			// real light = approx(...);
 			int reach = reachID[si];
 
 			siPressure = idw_pressure(pressureSeaLevel[,ti], pressureDist[si,], 
 				elevation[si], nPressure);
+
+			// deal with light
+			siLight = approx(lightTimes[ltTimeIndex:(ltTimeIndex+1)], 
+						light[si, ltTimeIndex:(ltTimeIndex+1)], ti)
 
 			// get input DO from upstream pixel(s)
 			// note that stan is somewhat inflexible
@@ -137,8 +162,8 @@ transformed parameters {
 
 			// note that all of these components, including ER, are constant at the reach scale
 			// finer resolution may be necessary in the future
-			rf = computeRF(waterTemp, pressure, DOpr[si, ti-1], k600[reach]);
-			gpp[si, ti] = computeGPP(light, lP1[reach], lP2[reach]);
+			rf = computeRF(waterTemp, siPressure, DOpr[si, ti-1], k600[reach]);
+			gpp[si, ti] = computeGPP(siLight, lP1[reach], lP2[reach]);
 			er[si, ti] = computeER(waterTemp, ER24_20[reach]);
 			ddodt = adv + (gpp[si, ti] + er[si, ti] + rf) / depth[si];
 			DO_pr[si, ti] = DO_pr[si, ti-1] + ddodt * dt;
