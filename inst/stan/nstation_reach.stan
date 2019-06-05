@@ -1,4 +1,15 @@
 functions {
+	// pressure units must be in hPa
+	real pressureCorrection (real P, real elev, real newElev) {
+		real a = 2.25577e-5;
+		real = 5.25588;
+		real seaLevelP;
+
+		P *= 100; // convert from hPa
+		seaLevelP = P / pow(1 - a * elev, b);
+		return((seaLevelP * pow(1 - a * newElev, b))/100);
+	}
+
 	real computeRF() {
 
 	}
@@ -11,8 +22,13 @@ functions {
 
 	}
 
-	real idw() {
-
+	real idw_pressure(vector vals, vector dist, real elevOut, int n) {
+		vector weight = 1/pow(dist, 2);
+		for(i in 1:n) {
+			vals[i] = pressureCorrection(vals[i], 0, elevOut); // convert back from sea level
+		}
+		weight = weight / sum(weight);
+		return(sum(vals * weight));
 	}
 
 	real idw_river () {
@@ -30,7 +46,7 @@ functions {
 	}
 }
 
-data{
+data {
 	int<lower=1> nSites; 	// number of sites
 	int<lower=2> maxTime;	// number of time steps
 	int<lower = 1> nReaches;
@@ -42,7 +58,9 @@ data{
 	vector<lower=0> [nSites] area;
 	vector<lower=0> [nSites] dx;
 	vector<lower=0> [nSites] depth;
+	vector [nSites] elevation;
 	int<lower=1, upper = nReaches> reachID [nSites];
+	matrix<lower = 0> [nsites, 2] coords;
 	
 	// upstream sites; first column is for the main (larger) upstream pixel
 	// second column will only be used for confluences; weight should be 0 for non-confluences
@@ -53,6 +71,29 @@ data{
 	// there is a weight based on discharge and a value
 	vector<lower = 0> [nSites] latWeight;
 	vector<lower=0> [nSites] latInputDO;
+
+	// data relating to atmospheric pressure
+	int<lower = 0> nPressure;
+	matrix<lower = 0> [nPressure, 2] prCoords;
+	matrix<lower = 0> [nPressure, maxTime] pressure;
+	vector [nPressure] prElev;
+
+}
+transformed data {
+	matrix <lower = 0> [nPressure, maxTime] pressureSeaLevel;
+	matrix <lower = 0> [nSites, nPressure] pressureDist;
+	for(i in 1:nSites) {
+		for(j in 1:nPressure) {
+			pressureDist[i, j] = sqrt(pow(coords[i, 1] - prCoords[j, 1], 2) + 
+				pow(coords[i, 2] - prCoords[j, 2], 2))
+		}
+	}
+
+	for(i in 1:nPressure) {
+		for(j in 1:maxTime) {
+			pressureSeaLevel[i, j] = pressureCorrection(pressure[i, j], prElev[i], 0)
+		}
+	}
 }
 parameters {
 	vector<lower=0> [nReaches] k600;
@@ -76,11 +117,13 @@ transformed parameters {
 			real rf;
 			real inputDO;
 			real adv;
+			real siPressure;
 			// real waterTemp = idw_river(...);
 			// real pressure = idw(...);
 			// real light = approx(...);
 			int reach = reachID[si];
 
+			siPressure = idw_pressure(pressureSeaLevel[,ti], pressureDist[si,], elevation[si], int n)
 
 			// get input DO from upstream pixel(s)
 			// note that stan is somewhat inflexible
