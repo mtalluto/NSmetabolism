@@ -119,11 +119,11 @@ transformed parameters {
 			real adv;
 			real siPressure;
 			// real waterTemp = idw_river(...);
-			// real pressure = idw(...);
 			// real light = approx(...);
 			int reach = reachID[si];
 
-			siPressure = idw_pressure(pressureSeaLevel[,ti], pressureDist[si,], elevation[si], int n)
+			siPressure = idw_pressure(pressureSeaLevel[,ti], pressureDist[si,], 
+				elevation[si], nPressure);
 
 			// get input DO from upstream pixel(s)
 			// note that stan is somewhat inflexible
