@@ -1,4 +1,13 @@
 functions {
+	real kT(real temp, real k600);
+	real computeRF(real temp, real pressure, real DO, real k600);
+	real osat(real temp, real P);
+	real computeAdvection(real inputDO, real outputDO, real Q, real area, real dx);
+	real computeGPP(real PAR, real lP1, real lP2);
+	real computeER(real temp, real ER24_20);
+
+	#include functions.stan
+
 	// pressure units must be in hPa
 	real pressureCorrection (real P, real elev, real newElev) {
 		real a = 2.25577e-5;
@@ -8,18 +17,6 @@ functions {
 		P *= 100; // convert from hPa
 		seaLevelP = P / pow(1 - a * elev, b);
 		return((seaLevelP * pow(1 - a * newElev, b))/100);
-	}
-
-	real computeRF(real temp, real pressure, real DO, real k600) {
-		return kT(temp, k600) * (osat(temp, pressure) - DO);
-	}
-	
-	real computeGPP() {
-
-	}
-
-	real computeER() {
-
 	}
 
 	// perform inverse distance weighting with a correction for elevation
@@ -68,11 +65,6 @@ functions {
 		return(y[1] + (xnew - x[1]) * ((y[2] - y[1])/(x[2] - x[1])));
 	}
 
-	real computeAdvection(real inputDO, real outputDO, real Q, real area, real dx) {
-		real inputMass = Q * inputDO;
-		real outputMass = Q * outputDO;
-		return (-1/area) * (outputMass - inputMass)/dx;
-	}
 }
 
 data {
