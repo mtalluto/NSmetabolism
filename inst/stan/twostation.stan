@@ -43,11 +43,8 @@ functions {
 
 		// Uehlinger et al 2000 eq 3b
 		// GPP = PAR/(P1 + P2 * PAR)
-		if(lP2 == 0) {
-			lGPP = log(PAR) - lP1;
-		} else {
-			lGPP = log(PAR) - log_sum_exp(lP1, lP2 + log(PAR));
-		}
+		lGPP = log(PAR) - log_sum_exp(lP1, lP2 + log(PAR));
+
 		return exp(lGPP);
 	}
 
@@ -89,8 +86,8 @@ data {
 	real <lower = 0> dt;
 }
 parameters {
-	vector<lower=0> [2] lP1;
-	vector<lower=0> [2] lP2; 
+	vector [2] lP1;
+	vector [2] lP2; 
 	vector<upper=0> [2] ER24_20;
 	real<lower=0> k600;
 	real<lower=0> sigma;

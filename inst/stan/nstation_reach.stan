@@ -10,10 +10,10 @@ functions {
 		return((seaLevelP * pow(1 - a * newElev, b))/100);
 	}
 
-	real computeRF() {
-
+	real computeRF(real temp, real pressure, real DO, real k600) {
+		return kT(temp, k600) * (osat(temp, pressure) - DO);
 	}
-
+	
 	real computeGPP() {
 
 	}
@@ -80,6 +80,7 @@ data {
 	int<lower=2> maxTime;	// number of time steps
 	int<lower = 1> nReaches;
 	real<lower=0> dt;		// length (in minutes) of a time step
+	int<lower = 1> nDO; // number of DO observations
 
 	// site characteristics
 	vector<lower=0> [nSites] DOinitial;
@@ -89,6 +90,10 @@ data {
 	vector<lower=0> [nSites] depth;
 	vector [nSites] elevation;
 	int<lower=1, upper = nReaches> reachID [nSites];
+
+	// reach characteristics
+	vector<lower = 0> [nReaches] slope;
+	vector<lower = 0> [nReaches] velocity;
 
 	// measured variables and variables for keeping track of them
 	int <lower = 1> nTempSites;
@@ -101,6 +106,9 @@ data {
 	int <lower =1 , upper = nSites> waterTempSiteIDs [nTempSites]; // pointer back to pixelID
 	matrix [nTempSites, maxTime] waterTempMeasured;
 	matrix<lower = 0> [nsites, 2] coords;
+	vector<lower = 0> [nDO] DO;
+	vector<lower = 0> [nDO] DOtimes;
+	vector<lower = 0> [nDO] DOsites;
 	
 	// upstream sites; first column is for the main (larger) upstream pixel
 	// second column will only be used for confluences; weight should be 0 for non-confluences
@@ -123,6 +131,12 @@ data {
 	matrix [nSites, nLightTimes] light;
 	vector [nLightTimes] lightTimes;
 
+	// adjustable priors
+	real logP1_pr_mu; // suggested from 1 station - mean of 9
+	real logP1_pr_sd; // suggested from 1 station - sd of 1
+	real logP2_pr_mu; 
+	real logP2_pr_sd;
+
 }
 transformed data {
 	matrix <lower = 0> [nPressure, maxTime] pressureSeaLevel;
@@ -142,9 +156,10 @@ transformed data {
 }
 parameters {
 	vector<lower=0> [nReaches] k600;
-	vector<lower=0> [nReaches] lP1;
-	vector<lower=0> [nReaches] lP2;
+	vector [nReaches] lP1;
+	vector [nReaches] lP2;
 	vector<lower=0> [nReaches] ER24_20;
+	real<lower = 0> sigma;
 }
 
 transformed parameters {
@@ -213,4 +228,19 @@ transformed parameters {
 			DO_pr[si, ti] = DO_pr[si, ti-1] + ddodt * dt;
 		}
 	}
+}
+model {
+	for(i in 1:nDO) {
+		DO[i] ~ normal(DOpr[DOsites[i], DOtimes[i]], sigma);
+	}
+
+	for(i in 1:nReaches) {
+		k600[i] ~ normal((1162 * pow(slope[i], 0.77) * pow(velocity[i], 0.85))/(24*60),
+				0.0001462944 + 0.0012564499 * slope[i] + 0.0124307051 * velocity[i] + 
+				0.0961094198 * slope[i] * velocity[i]);
+	}
+	
+	lP1 ~ normal(logP1_pr_mu, logP1_pr_sd);
+	lP2 ~ normal(logP2_pr_mu, logP2_pr_sd);
+	ER24_20 ~ normal(0, 10);
 }
