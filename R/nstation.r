@@ -42,3 +42,11 @@ library("WatershedTools")
 		transformed_parameters
 		finally model
 "
+
+
+stanDat <- list(
+	nDO = nrow(),
+	maxTime = ncol(),
+	dummyKT = ,
+	waterTempMeasured = 
+)
