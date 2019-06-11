@@ -1,12 +1,21 @@
 functions {
 	real kT(real temp, real k600);
-	real computeRF(real temp, real pressure, real DO, real k600);
-	real osat(real temp, real P);
-	real computeAdvection(real inputDO, real outputDO, real Q, real area, real dx);
-	real computeGPP(real PAR, real lP1, real lP2);
-	real computeER(real temp, real ER24_20);
+	// real computeRF(real temp, real pressure, real DO, real k600);
+	// real osat(real temp, real P);
+	// real computeAdvection(real inputDO, real outputDO, real Q, real area, real dx);
+	// real computeGPP(real PAR, real lP1, real lP2);
+	// real computeER(real temp, real ER24_20);
 
-	#include functions.stan
+	#include "functions.stan"
+	// real kT(real temp, real k600) {
+	// 	real Sc;
+	// 	// compute Schmidt number for oxygen
+	// 	// parameters from Wanninkhof 1992. appendix
+	// 	Sc = 1800.6 - 120.10 * temp + 3.7818 * temp^2 - 0.047608 * temp^3;
+		
+	// 	// Van de Bogert et al eqn 5
+	// 	return k600 * (Sc / 600)^-0.5;
+	// }
 /*
 	// pressure units must be in hPa
 	real pressureCorrection (real P, real elev, real newElev) {
@@ -69,11 +78,12 @@ functions {
 
 data {
 	// sample sizes
-	int<lower = 1> nDO; 	// number of DO observations
+	// int<lower = 1> nDO; 	// number of DO observations
 	int<lower = 2> maxTime;	// number of time steps
+	int<lower = 1> nSites; 	// number of sites where measurements were made
 
 	// DUMMY VARIABLES FOR TESTING
-	matrix [nDO, maxTime] dummyKT;
+	matrix [nSites, maxTime] dummyKT;
 
 
 	// site-level variables
@@ -81,11 +91,11 @@ data {
 	// reach-level variables
 
 	// other-scale variables
-	// waterTempMeasured: water temperature is measured with DO
-	matrix [nDO, maxTime] waterTempMeasured;
+	// waterTempMeasured: water temperature is measured with DO, but we interpolate it to every
+	// minute and pass in matrix format
+	matrix [nSites, maxTime] waterTempMeasured;
 
 	/*
-	int<lower=1> nSites; 	// number of sites
 	int<lower = 1> nReaches;
 	real<lower=0> dt;		// length (in minutes) of a time step
 
@@ -163,16 +173,24 @@ transformed data {
 }
 */
 parameters {
+	real k600;
+
+	real<lower = 0> sigma;
 	/*
 	vector<lower=0> [nReaches] k600;
 	vector [nReaches] lP1;
 	vector [nReaches] lP2;
 	vector<lower=0> [nReaches] ER24_20;
-	real<lower = 0> sigma;
 	*/
 }
 
 transformed parameters {
+	matrix [nSites, maxTime] dummyKTTheo;
+	for(i in 1:nSites) {
+		for(j in 1:maxTime) {
+			dummyKTTheo[i,j] = kT(waterTempMeasured[i,j], k600);
+		}
+	}
 	/*
 	matrix [nSites, maxTime] gpp = rep_matrix(0, nSites, maxTime);
 	matrix [nSites, maxTime] er = rep_matrix(0, nSites, maxTime);
@@ -242,6 +260,12 @@ transformed parameters {
 	*/
 }
 model {
+	for(i in 1:nSites) {
+		for(j in 1:maxTime) {
+			// waterTempMeasured[i,j] ~ normal(k600, sigma);
+			dummyKT[i,j] ~ normal(dummyKTTheo[i,j], sigma);
+		}
+	}
 	/*
 	for(i in 1:nDO) {
 		DO[i] ~ normal(DOpr[DOsites[i], DOtimes[i]], sigma);
