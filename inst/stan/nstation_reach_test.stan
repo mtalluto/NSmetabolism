@@ -1,7 +1,7 @@
 functions {
 	real kT(real temp, real k600);
 	// real computeRF(real temp, real pressure, real DO, real k600);
-	// real osat(real temp, real P);
+	real osat(real temp, real P);
 	// real computeAdvection(real inputDO, real outputDO, real Q, real area, real dx);
 	// real computeGPP(real PAR, real lP1, real lP2);
 	// real computeER(real temp, real ER24_20);
@@ -81,10 +81,7 @@ data {
 	// int<lower = 1> nDO; 	// number of DO observations
 	int<lower = 2> maxTime;	// number of time steps
 	int<lower = 1> nSites; 	// number of sites where measurements were made
-
-	// DUMMY VARIABLES FOR TESTING
-	matrix [nSites, maxTime] dummyKT;
-
+	int<lower = 0> nPressure;
 
 	// site-level variables
 
@@ -135,13 +132,19 @@ data {
 	// there is a weight based on discharge and a value
 	vector<lower = 0> [nSites] latWeight;
 	vector<lower=0> [nSites] latInputDO;
+*/
+
+
 
 	// data relating to atmospheric pressure
-	int<lower = 0> nPressure;
-	matrix<lower = 0> [nPressure, 2] prCoords;
-	matrix<lower = 0> [nPressure, maxTime] pressure;
-	vector [nPressure] prElev;
+	//matrix<lower = 0> [nPressure, 2] prCoords;
+	matrix<lower = 0> [nPressure, maxTime] pressure; // atmospheric pressure, in hPa (i.e., mbar)
+	//vector [nPressure] prElev;
 
+	// DUMMY VARIABLES FOR TESTING
+	matrix [nPressure, maxTime] dummyOsat;
+
+/*
 	// data relating to light
 	int <lower = 1> nLightTimes;
 	matrix [nSites, nLightTimes] light;
@@ -173,7 +176,6 @@ transformed data {
 }
 */
 parameters {
-	real k600;
 
 	real<lower = 0> sigma;
 	/*
@@ -185,10 +187,10 @@ parameters {
 }
 
 transformed parameters {
-	matrix [nSites, maxTime] dummyKTTheo;
-	for(i in 1:nSites) {
+	matrix [nPressure, maxTime] dummyOSTheo;
+	for(i in 1:nPressure) {
 		for(j in 1:maxTime) {
-			dummyKTTheo[i,j] = kT(waterTempMeasured[i,j], k600);
+			dummyOSTheo[i,j] = osat(waterTempMeasured[i,j], pressure[i,j]);
 		}
 	}
 	/*
@@ -260,12 +262,14 @@ transformed parameters {
 	*/
 }
 model {
-	for(i in 1:nSites) {
+	// garbage model for testing
+	for(i in 1:nPressure) {
 		for(j in 1:maxTime) {
-			// waterTempMeasured[i,j] ~ normal(k600, sigma);
-			dummyKT[i,j] ~ normal(dummyKTTheo[i,j], sigma);
+			dummyOsat[i,j] ~ normal(dummyOSTheo[i,j], sigma);
 		}
 	}
+
+	// real model below here
 	/*
 	for(i in 1:nDO) {
 		DO[i] ~ normal(DOpr[DOsites[i], DOtimes[i]], sigma);

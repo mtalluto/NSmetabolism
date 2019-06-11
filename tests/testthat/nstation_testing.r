@@ -122,23 +122,31 @@ maptools::pointLabel(coordinates(sites),labels=sites$siteName, cex=0.6)
 dsSite <- "37"
 dsSiteInd <- match(dsSite, sites$siteName)
 
+### starting/ending times
+startDate <- dmy("24-04-18")
+endDate <- dmy("29-04-18")
+
+
+
 sarantopouros <- subcatchment(vjosa, WatershedTools::extract(vjosa, sites[dsSiteInd,]))
 sites <- sites[!is.na(WatershedTools::extract(sarantopouros, sites)),]
 
-# get all DO measurements
+# get all data measurements for desired sites
 qry <- paste0("SELECT timestamp, variable, value, siteID, siteName FROM allSiteData 
-	WHERE expedition LIKE '", expedition, "' AND (variable LIKE 'dissolved oxygen' OR 
-	variable LIKE 'water temperature')")
-doDat_all <- data.table(dbGetQuery(metabDB, qry))
+	WHERE expedition LIKE '", expedition, "'")
+allDat <- data.table(dbGetQuery(metabDB, qry))
+allDat$time <- as_datetime(allDat$timestamp, tz="Europe/Tirane")
+allDat <- allDat[date(time) >= startDate & date(time) >= endDate]
+allDat$minutes <- 1 + (allDat$timestamp - min(allDat$timestamp)) / 60
 
-doDat <- merge(doDat_all, sites, by = 'siteID', all.x = FALSE, all.y = TRUE)
-doDat$siteID <- factor(doDat$siteID)
-doDat$time <- as_datetime(doDat$timestamp, tz="Europe/Tirane")
-doDat <- doDat[date(time) >= dmy("24-04-18") & date(time) >= dmy("29-04-18")]
-doDat$minutes <- 1 + (doDat$timestamp - min(doDat$timestamp)) / 60
+prDat <- allDat[variable == 'pressure']
+
+allDat <- merge(allDat, sites, by = 'siteID', all.x = FALSE, all.y = TRUE)
+allDat$siteID <- factor(allDat$siteID)
+
+doDat <- allDat[allDat$variable %in% c('water temperature', 'dissolved oxygen')]
 ggplot(doDat, aes(x = time, y = value, col=siteID)) + geom_line(size = 0.5) + 
 	facet_grid(variable ~ .)
-
 doDat <- dcast(doDat, siteName.x + siteID + timestamp + x + y + time + minutes ~ variable)
 
 maxTime <- max(doDat$minutes)
@@ -152,12 +160,24 @@ colnames(watTempDatInterp) <- watTempDatList[[1]][['x']]
 rownames(watTempDatInterp) <- names(watTempDatList)
 
 
+### pressure data
+prDat <- acast(prDat, siteName ~ minutes, value.var = 'value')
+prDatList <- apply(prDat, 1, function(x) {
+	approx(as.integer(colnames(prDat)), x, 1:maxTime, rule = 2)
+})
+prDatInterp <- do.call(rbind, lapply(prDatList, function(x) x$y))
+colnames(prDatInterp) <- prDatList[[1]][['x']]
+rownames(prDatInterp) <- names(prDatList)
+
+
 stanDat <- list(
 	nDO = nrow(doDat),
 	maxTime = ncol(watTempDatInterp),
+	nPressure = nrow(prDatInterp),
 	nSites = nrow(watTempDatInterp),
-	dummyKT = matrix(rnorm(length(watTempDatInterp)), nrow = nrow(watTempDatInterp), ncol=ncol(watTempDatInterp)),
-	waterTempMeasured = watTempDatInterp
+	waterTempMeasured = watTempDatInterp,
+	pressure = prDatInterp,
+	dummyOsat = matrix(rnorm(length(prDatInterp)), nrow = nrow(prDatInterp), ncol=ncol(prDatInterp))
 )
 
 modCode <- stanc_builder(file = 
