@@ -27,9 +27,6 @@
 	// as that site's pixelID so we can get back to discharge and other data
 	int <lower =1 , upper = nSites> waterTempSiteIDs [nTempSites]; // pointer back to pixelID
 	matrix<lower = 0> [nsites, 2] coords;
-	vector<lower = 0> [nDO] DO;
-	vector<lower = 0> [nDO] DOtimes;
-	vector<lower = 0> [nDO] DOsites;
 	
 	// upstream sites; first column is for the main (larger) upstream pixel
 	// second column will only be used for confluences; weight should be 0 for non-confluences
@@ -42,10 +39,7 @@
 	vector<lower=0> [nSites] latInputDO;
 
 	// data relating to atmospheric pressure
-	int<lower = 0> nPressure;
 	matrix<lower = 0> [nPressure, 2] prCoords;
-	matrix<lower = 0> [nPressure, maxTime] pressure;
-	vector [nPressure] prElev;
 
 	// data relating to light
 	int <lower = 1> nLightTimes;
@@ -61,13 +55,10 @@
 "
 
 "	functions to test
-	real computeRF(real temp, real pressure, real DO, real k600);
-	real osat(real temp, real P);
 	real computeAdvection(real inputDO, real outputDO, real Q, real area, real dx);
 	real computeGPP(real PAR, real lP1, real lP2);
 	real computeER(real temp, real ER24_20);
 
-	real pressureCorrection (real P, real elev, real newElev) {
 	real idw_pressure(vector vals, vector dist, real elevOut, int n) {
 	real idw_river (vector [3] vals, vector [3] nbQ, vector[3] dist, real Q) {
 	real approx(vector x, vector y, xnew) {
@@ -106,6 +97,9 @@ sites <- data.table(dbGetQuery(metabDB, qry))
 coordinates(sites) <- c('x', 'y')
 proj4string(sites) <- CRS("+init=epsg:4326")
 
+qry <- "SELECT * FROM siteAttributeView WHERE variable LIKE 'elevation'"
+siteElev <- data.table(dbGetQuery(metabDB, qry))
+
 
 
 # plot the river
@@ -130,6 +124,7 @@ endDate <- dmy("29-04-18")
 
 sarantopouros <- subcatchment(vjosa, WatershedTools::extract(vjosa, sites[dsSiteInd,]))
 sites <- sites[!is.na(WatershedTools::extract(sarantopouros, sites)),]
+sites$pixelID <- WatershedTools::extract(sarantopouros, sites)
 
 # get all data measurements for desired sites
 qry <- paste0("SELECT timestamp, variable, value, siteID, siteName FROM allSiteData 
@@ -144,10 +139,24 @@ prDat <- allDat[variable == 'pressure']
 allDat <- merge(allDat, sites, by = 'siteID', all.x = FALSE, all.y = TRUE)
 allDat$siteID <- factor(allDat$siteID)
 
+
+#################
+#
+#  DISSOLVED OXYGEN
+#
+#################
+
 doDat <- allDat[allDat$variable %in% c('water temperature', 'dissolved oxygen')]
 ggplot(doDat, aes(x = time, y = value, col=siteID)) + geom_line(size = 0.5) + 
 	facet_grid(variable ~ .)
 doDat <- dcast(doDat, siteName.x + siteID + timestamp + x + y + time + minutes ~ variable)
+doDat$pixelID <- sites[match(doDat$siteID, sites$siteID),]$pixelID
+
+#################
+#
+#  WATER TEMPERATURE
+#
+#################
 
 maxTime <- max(doDat$minutes)
 # water temperature needs to be every minute
@@ -160,26 +169,39 @@ colnames(watTempDatInterp) <- watTempDatList[[1]][['x']]
 rownames(watTempDatInterp) <- names(watTempDatList)
 
 
-### pressure data
-prDat <- acast(prDat, siteName ~ minutes, value.var = 'value')
-prDatList <- apply(prDat, 1, function(x) {
-	approx(as.integer(colnames(prDat)), x, 1:maxTime, rule = 2)
+#################
+#
+#  PRESSURE
+#
+#################
+prDatMat <- acast(prDat, siteName ~ minutes, value.var = 'value')
+prDatList <- apply(prDatMat, 1, function(x) {
+	approx(as.integer(colnames(prDatMat)), x, 1:maxTime, rule = 2)
 })
 prDatInterp <- do.call(rbind, lapply(prDatList, function(x) x$y))
 colnames(prDatInterp) <- prDatList[[1]][['x']]
 rownames(prDatInterp) <- names(prDatList)
+prElev = siteElev[match(rownames(prDatInterp), siteElev$siteName),value]
 
 
 stanDat <- list(
 	nDO = nrow(doDat),
-	maxTime = ncol(watTempDatInterp),
-	nPressure = nrow(prDatInterp),
 	nSites = nrow(watTempDatInterp),
+	nPressure = nrow(prDatInterp),
+	nPixels = nrow(sarantopouros$data),
+	nReaches = 1,
+	maxTime = ncol(watTempDatInterp),
+	DO = doDat[['dissolved oxygen']],
+	DOpixels = doDat[['pixelID']],
+	DOtimes = doDat[['minutes']],
 	waterTempMeasured = watTempDatInterp,
 	pressure = prDatInterp,
-	dummyOsat = matrix(rnorm(length(prDatInterp)), nrow = nrow(prDatInterp), ncol=ncol(prDatInterp))
-)
+	prElev = as.array(prElev),
+	dummyOsat = matrix(rnorm(length(prDatInterp)), nrow = nrow(prDatInterp), 
+		ncol=ncol(prDatInterp)))
 
+
+devtools::load_all()
 modCode <- stanc_builder(file = 
 	system.file("stan/nstation_reach_test.stan", package="NSmetabolism"))
 mod <- stan_model(stanc_ret = modCode)
