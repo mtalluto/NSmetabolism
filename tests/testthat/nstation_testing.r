@@ -8,13 +8,11 @@
 	vector<lower=0> [nSites] area;
 	vector<lower=0> [nSites] dx;
 	vector<lower=0> [nSites] depth;
-	vector [nSites] elevation;
 	int<lower=1, upper = nReaches> reachID [nSites];
 
 	vector<lower = 0> [nReaches] slope;
 	vector<lower = 0> [nReaches] velocity;
 
-	matrix<lower = 0> [nsites, 2] coords;
 	
 	matrix<lower=0> [nSites, 2] usWeight;
 	int<lower = 1, upper = nSites> usNb [nSites, 2]; // neighbor indices for upstream pixels
@@ -22,7 +20,6 @@
 	vector<lower = 0> [nSites] latWeight;
 	vector<lower=0> [nSites] latInputDO;
 
-	matrix<lower = 0> [nPressure, 2] prCoords;
 
 	int <lower = 1> nLightTimes;
 	matrix [nSites, nLightTimes] light;
@@ -40,7 +37,6 @@
 	real computeGPP(real PAR, real lP1, real lP2);
 	real computeER(real temp, real ER24_20);
 
-	real idw_pressure(vector vals, vector dist, real elevOut, int n) {
 	real approx(vector x, vector y, xnew) {
 
 
@@ -180,7 +176,9 @@ prDatInterp <- do.call(rbind, lapply(prDatList, function(x) x$y))
 colnames(prDatInterp) <- prDatList[[1]][['x']]
 rownames(prDatInterp) <- names(prDatList)
 prElev = siteElev[match(rownames(prDatInterp), siteElev$siteName),value]
-
+qry <- "SELECT x,y,siteName FROM sites"
+prCoords <- data.table(dbGetQuery(metabDB, qry))
+prCoords <- prCoords[siteName %in% rownames(prDatMat), .(x, y)]
 
 stanDat <- list(
 	nDO = nrow(doDat),
@@ -188,6 +186,8 @@ stanDat <- list(
 	nPressure = nrow(prDatInterp),
 	nPixels = nrow(sarantopouros$data),
 	nReaches = 1,
+	coords = sarantopouros[,c('x', 'y')],
+	elevation = sarantopouros[,'elevation'],
 	Q = sarantopouros[,'discharge'],
 	maxTime = ncol(watTempDatInterp),
 	DO = doDat[['dissolved oxygen']],
@@ -198,6 +198,7 @@ stanDat <- list(
 	waterTempNbs = wtNBMat,
 	waterTempDist = wtDistanceMatrix,
 	pressure = prDatInterp,
+	prCoords = prCoords,
 	prElev = as.array(prElev),
 	dummyOsat = matrix(rnorm(length(prDatInterp)), nrow = nrow(prDatInterp), 
 		ncol=ncol(prDatInterp)))

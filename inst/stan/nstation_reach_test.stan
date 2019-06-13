@@ -36,20 +36,45 @@ functions {
 		return((seaLevelP * pow(1 - a * newElev, b))/100);
 	}
 
+	/**
+	 * compute a weighted average
+	 *
+	 * @param vals Values to average
+	 * @param weights Weights to assign
+	 * @param n Length of vectors
+	*/
+	real weighted_avg (vector vals, vector weights, int n) {
+		vector [n] normWts;
+		vector [n] res;
+		normWts = weights / sum(weights);
+		for(i in 1:n)
+			res[i] = vals[i] * weights[i];
+		return sum(res);
+	}
 
-	// perform inverse distance weighting with a correction for elevation
-	// vals: input elevation; assumed to be at 0m elevation
-	// dist: distance from focal point to vals
-	// elevOut: elevation of focal site
-	// n: number of pressure observations
-	// real idw_pressure(vector vals, vector dist, real elevOut, int n) {
-	// 	vector weight = 1/pow(dist, 2);
-	// 	for(i in 1:n) {
-	// 		vals[i] = pressureCorrection(vals[i], 0, elevOut); // convert back from sea level
-	// 	}
-	// 	weight = weight / sum(weight);
-	// 	return(sum(vals * weight));
-	// }
+
+	/**
+	 * perform inverse distance weighting with a correction for elevation
+	 *
+	 * @param vals input elevation; assumed to be at 0m elevation
+	 * @param dist distance from focal point to vals
+	 * @param elevOut elevation of focal site
+	 * @param n number of pressure observations
+	 * @return interpolated value of vals
+	*/
+	real idw_pressure(vector vals, vector dist, real elevOut, int n) {
+		vector [n] weight;
+		vector [n] valCorr;
+		vector [n] res;
+
+		for(i in 1:n) {
+			weight[i] = 1/pow(dist[i], 2);
+			valCorr[i] = pressureCorrection(vals[i], 0, elevOut); // convert back from sea level
+		}
+		return weighted_avg(vals, weight, n);
+	}
+
+
 
 	/**
 	 * Compute discharge and inverse square distance weighted interpolation based on river distance
@@ -59,7 +84,7 @@ functions {
 	 * @param nbQ discharge of neighbor sties
 	 * @param dist distance (m) along river to sites
 	 * @param Q discharge of focal site
-	 * @return interpolated value of vals
+	 * @return 
 	*/
 	real idw_river (vector vals, vector nbQ, vector dist, real Q) {
 		vector[3] QR; // discharge ratio to use; should always have upstream in numerator
@@ -76,10 +101,7 @@ functions {
 		for(i in 1:3)
 			weights[i] = QR[i] / pow(dist[i], 2);
 
-		weights = weights / sum(weights);
-		for(i in 1:3)
-			res[i] = vals[i] * weights[i];
-		return sum(res);
+		return weighted_avg(vals, weights, 3);
 	}
 
 	// simple linear interpolation between two points
@@ -119,8 +141,9 @@ data {
 	// vector<lower=0> [nSites] area;
 	// vector<lower=0> [nSites] dx;
 	// vector<lower=0> [nSites] depth;
-	// vector [nSites] elevation;
+	vector [nPixels] elevation;
 	// int<lower=1, upper = nReaches> reachID [nSites];
+	matrix [nPixels, 2] coords;
 
 	// // reach characteristics
 	// vector<lower = 0> [nReaches] slope;
@@ -142,7 +165,6 @@ data {
 
 
 
-	// matrix<lower = 0> [nsites, 2] coords;
 	vector<lower = 0> [nDO] DO;
 	int<lower = 0, upper = maxTime> DOtimes [nDO];
 	int<lower = 1, upper = nPixels> DOpixels [nDO];
@@ -159,8 +181,10 @@ data {
 
 
 
-	// data relating to atmospheric pressure
-	//matrix<lower = 0> [nPressure, 2] prCoords;
+	/*
+		PRESSURE
+	*/
+	matrix [nPressure, 2] prCoords;
 	matrix<lower = 0> [nPressure, maxTime] pressure; // atmospheric pressure, in hPa (i.e., mbar)
 	vector [nPressure] prElev;
 
@@ -180,13 +204,13 @@ data {
 
 transformed data {
 	matrix <lower = 0> [nPressure, maxTime] pressureSeaLevel;
-	// matrix <lower = 0> [nSites, nPressure] pressureDist;
-	// for(i in 1:nSites) {
-	// 	for(j in 1:nPressure) {
-	// 		pressureDist[i, j] = sqrt(pow(coords[i, 1] - prCoords[j, 1], 2) + 
-	// 			pow(coords[i, 2] - prCoords[j, 2], 2))
-	// 	}
-	// }
+	matrix <lower = 0> [nPixels, nPressure] pressureDist;
+	for(i in 1:nPixels) {
+		for(j in 1:nPressure) {
+			pressureDist[i, j] = sqrt(pow(coords[i, 1] - prCoords[j, 1], 2) + 
+				pow(coords[i, 2] - prCoords[j, 2], 2));
+		}
+	}
 
 	for(i in 1:nPressure) {
 		for(j in 1:maxTime) {
@@ -248,8 +272,8 @@ transformed parameters {
 
 
 			// interpolate pressure
-			// siPressure = idw_pressure(pressureSeaLevel[,ti], pressureDist[si,], 
-			// 	elevation[si], nPressure);
+			pixPressure = idw_pressure(pressureSeaLevel[,ti], to_vector(pressureDist[pix,]), 
+				elevation[pix], nPressure);
 
 			// interpolate light
 			// siLight = approx(lightTimes[ltTimeIndex:(ltTimeIndex+1)], 
@@ -269,7 +293,6 @@ transformed parameters {
 			// finer resolution may be necessary in the future
 
 			// BEGIN GARBAGE TESTING CODE
-				pixPressure = pressureSeaLevel[1,ti];
 				DOpr[pix, ti-1] = DO[1];
 				reach = 1;
 			// END GARBAGE
