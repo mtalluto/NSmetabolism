@@ -36,53 +36,64 @@ functions {
 		return((seaLevelP * pow(1 - a * newElev, b))/100);
 	}
 
-/*
+
 	// perform inverse distance weighting with a correction for elevation
 	// vals: input elevation; assumed to be at 0m elevation
 	// dist: distance from focal point to vals
 	// elevOut: elevation of focal site
 	// n: number of pressure observations
-	real idw_pressure(vector vals, vector dist, real elevOut, int n) {
-		vector weight = 1/pow(dist, 2);
-		for(i in 1:n) {
-			vals[i] = pressureCorrection(vals[i], 0, elevOut); // convert back from sea level
-		}
-		weight = weight / sum(weight);
-		return(sum(vals * weight));
-	}
+	// real idw_pressure(vector vals, vector dist, real elevOut, int n) {
+	// 	vector weight = 1/pow(dist, 2);
+	// 	for(i in 1:n) {
+	// 		vals[i] = pressureCorrection(vals[i], 0, elevOut); // convert back from sea level
+	// 	}
+	// 	weight = weight / sum(weight);
+	// 	return(sum(vals * weight));
+	// }
 
-	// for all vectors, 1 is downstream, 2:n are upstream
-	// vals: measured values
-	// nbQ: discharge of neighbor sties
-	// dist: distance along river to sites
-	// Q: discharge of focal site
-	real idw_river (vector [3] vals, vector [3] nbQ, vector[3] dist, real Q) {
+	/**
+	 * Compute discharge and inverse square distance weighted interpolation based on river distance
+	 * all vectors are of length 3 with index 1 being downstream and 2:3 upstream
+	 *
+	 * @param vals measured values
+	 * @param nbQ discharge of neighbor sties
+	 * @param dist distance (m) along river to sites
+	 * @param Q discharge of focal site
+	 * @return interpolated value of vals
+	*/
+	real idw_river (vector vals, vector nbQ, vector dist, real Q) {
 		vector[3] QR; // discharge ratio to use; should always have upstream in numerator
 		vector[3] weights;
-		for(i in 1:3) {
-			if(dist[i] == 0)
-				return(vals[i])
-			QR[i] = nbQ / Q;
-		}
+		vector[3] res;
+
+		// check if site is downstream of itself
+		if(dist[1] == 0)
+			return(vals[1]);
+		
+		QR = nbQ / Q;
 		QR[1] = 1/QR[1]; // correct the downstream site to put upstream on numerator
 
-		weights = QR / pow(dist, 2);
+		for(i in 1:3)
+			weights[i] = QR[i] / pow(dist[i], 2);
+
 		weights = weights / sum(weights);
-		return sum(vals * weights);
+		for(i in 1:3)
+			res[i] = vals[i] * weights[i];
+		return sum(res);
 	}
 
 	// simple linear interpolation between two points
 	// x: two x points
 	// y: two y points
 	// xnew: location of the point to interpolate
-	real approx(vector x, vector y, xnew) {
-		if(xnew == x[1])
-			return(y[1]);
-		if(xnew == x[2])
-			return(y[2]);
-		return(y[1] + (xnew - x[1]) * ((y[2] - y[1])/(x[2] - x[1])));
-	}
-*/
+	// real approx(vector x, vector y, xnew) {
+	// 	if(xnew == x[1])
+	// 		return(y[1]);
+	// 	if(xnew == x[2])
+	// 		return(y[2]);
+	// 	return(y[1] + (xnew - x[1]) * ((y[2] - y[1])/(x[2] - x[1])));
+	// }
+
 }
 
 data {
@@ -98,17 +109,13 @@ data {
 
 	// reach-level variables
 
-	// other-scale variables
-	// waterTempMeasured: water temperature is measured with DO, but we interpolate it to every
-	// minute and pass in matrix format
-	matrix [nSites, maxTime] waterTempMeasured;
 
 
 	// real<lower=0> dt;		// length (in minutes) of a time step
 
 	// // site characteristics
 	// vector<lower=0> [nSites] DOinitial;
-	// vector<lower=0> [nSites] Q;
+	vector<lower=0> [nPixels] Q;
 	// vector<lower=0> [nSites] area;
 	// vector<lower=0> [nSites] dx;
 	// vector<lower=0> [nSites] depth;
@@ -119,15 +126,22 @@ data {
 	// vector<lower = 0> [nReaches] slope;
 	// vector<lower = 0> [nReaches] velocity;
 
-	// // measured variables and variables for keeping track of them
-	// int <lower = 1> nTempSites;
-	// // for water temperature, for each pixel/site, we keep track of 2 upstream neigbors 
-	// // (indices 2:3), and a downstream neighbor (index 1); we also track the distance to each
-	// int <lower = 1, upper = nTempSites> waterTempNbs [nSites, 3] ; 
-	// matrix <lower = 1, upper = nTempSites> [nSites, 3] waterTempDist;
-	// // for each site where temperature is measured, we have the measurement, as well
-	// // as that site's pixelID so we can get back to discharge and other data
-	// int <lower =1 , upper = nSites> waterTempSiteIDs [nTempSites]; // pointer back to pixelID
+	/*
+		WATER TEMPERATURE
+	*/
+	// waterTempMeasured: water temperature is measured with DO, but we interpolate it to every
+	// minute and pass in matrix format
+	matrix [nSites, maxTime] waterTempMeasured;
+	// for water temperature, for each pixel/site, we keep track of 2 upstream neigbors 
+	// (indices 2:3), and a downstream neighbor (index 1); we also track the distance to each
+	int <lower = 1, upper = nSites> waterTempNbs [nPixels, 3] ; 
+	matrix <lower = 1, upper = nSites> [nPixels, 3] waterTempDist;
+	// for each site where temperature is measured, we have the measurement, as well
+	// as that site's pixelID so we can get back to discharge and other data
+	int <lower =1 , upper = nPixels> waterTempSiteIDs [nSites]; // pointer back to pixelID
+
+
+
 	// matrix<lower = 0> [nsites, 2] coords;
 	vector<lower = 0> [nDO] DO;
 	int<lower = 0, upper = maxTime> DOtimes [nDO];
@@ -224,14 +238,14 @@ transformed parameters {
 				deal with water temperature interpolation
 				this is a somewhat complicated index lookup so break out the indies a bit
 				for clarity
-
+			*/
 			{
-				int nbIDs [3] = waterTempNbs[si, ];
-				int nbPixIDs = waterTempSiteIDs[nbIDs];
+				int nbIDs [3] = waterTempNbs[pix, ];
+				int nbPixIDs [3] = waterTempSiteIDs[nbIDs];
 				waterTemp = idw_river(waterTempMeasured[nbIDs, ti], Q[nbPixIDs], 
-					waterTempDist[si, ], Q[si]);
+					to_vector(waterTempDist[pix, ]), Q[pix]);
 			}
-*/
+
 
 			// interpolate pressure
 			// siPressure = idw_pressure(pressureSeaLevel[,ti], pressureDist[si,], 
@@ -255,7 +269,6 @@ transformed parameters {
 			// finer resolution may be necessary in the future
 
 			// BEGIN GARBAGE TESTING CODE
-				waterTemp = waterTempMeasured[1,ti];
 				pixPressure = pressureSeaLevel[1,ti];
 				DOpr[pix, ti-1] = DO[1];
 				reach = 1;

@@ -4,49 +4,30 @@
 	int<lower = 1> nReaches;
 	real<lower=0> dt;		// length (in minutes) of a time step
 
-	// site characteristics
 	vector<lower=0> [nSites] DOinitial;
-	vector<lower=0> [nSites] Q;
 	vector<lower=0> [nSites] area;
 	vector<lower=0> [nSites] dx;
 	vector<lower=0> [nSites] depth;
 	vector [nSites] elevation;
 	int<lower=1, upper = nReaches> reachID [nSites];
 
-	// reach characteristics
 	vector<lower = 0> [nReaches] slope;
 	vector<lower = 0> [nReaches] velocity;
 
-	// measured variables and variables for keeping track of them
-	int <lower = 1> nTempSites;
-	// for water temperature, for each pixel/site, we keep track of 2 upstream neigbors 
-	// (indices 2:3), and a downstream neighbor (index 1); we also track the distance to each
-	int <lower = 1, upper = nTempSites> waterTempNbs [nSites, 3] ; 
-	matrix <lower = 1, upper = nTempSites> [nSites, 3] waterTempDist;
-	// for each site where temperature is measured, we have the measurement, as well
-	// as that site's pixelID so we can get back to discharge and other data
-	int <lower =1 , upper = nSites> waterTempSiteIDs [nTempSites]; // pointer back to pixelID
 	matrix<lower = 0> [nsites, 2] coords;
 	
-	// upstream sites; first column is for the main (larger) upstream pixel
-	// second column will only be used for confluences; weight should be 0 for non-confluences
 	matrix<lower=0> [nSites, 2] usWeight;
 	int<lower = 1, upper = nSites> usNb [nSites, 2]; // neighbor indices for upstream pixels
 
-	// lateral input for each site follows the same structure as upstream sites
-	// there is a weight based on discharge and a value
 	vector<lower = 0> [nSites] latWeight;
 	vector<lower=0> [nSites] latInputDO;
 
-	// data relating to atmospheric pressure
 	matrix<lower = 0> [nPressure, 2] prCoords;
 
-	// data relating to light
 	int <lower = 1> nLightTimes;
 	matrix [nSites, nLightTimes] light;
 	vector [nLightTimes] lightTimes;
 
-	// adjustable priors
 	real logP1_pr_mu; // suggested from 1 station - mean of 9
 	real logP1_pr_sd; // suggested from 1 station - sd of 1
 	real logP2_pr_mu; 
@@ -60,7 +41,6 @@
 	real computeER(real temp, real ER24_20);
 
 	real idw_pressure(vector vals, vector dist, real elevOut, int n) {
-	real idw_river (vector [3] vals, vector [3] nbQ, vector[3] dist, real Q) {
 	real approx(vector x, vector y, xnew) {
 
 
@@ -77,10 +57,12 @@ library(raster)
 library(lubridate)
 library(data.table)
 library(ggplot2)
-library(WatershedTools)
-library(NSmetabolism)
+# library(WatershedTools)
+# library(NSmetabolism)
 library(reshape2)
 library(rstan)
+setwd("~/work/packages/NSmetabolism")
+devtools::load_all("../WatershedTools")
 
 dbPath <- "~/work/projects/metabolism/metabolismDB/metabolism.sqlite"
 gisPath <- "~/work/projects/metabolism/catchment_delineations/vjosa/res/"
@@ -167,7 +149,23 @@ watTempDatList <- apply(watTempDat, 1, function(x) {
 watTempDatInterp <- do.call(rbind, lapply(watTempDatList, function(x) x$y))
 colnames(watTempDatInterp) <- watTempDatList[[1]][['x']]
 rownames(watTempDatInterp) <- names(watTempDatList)
+waterTempSiteIDs <- sites$pixelID[match(rownames(watTempDatInterp), sites$siteName)]
+wtDmat <- wsDistance(sarantopouros, waterTempSiteIDs)
+wtNBs <- nearestNeighbors(sarantopouros, sarantopouros[,'id'], wtDmat, selfAdjacency = TRUE)
 
+
+## note - this might be a useful addition to nearestNeighbors
+wtNBMat <- cbind(wtNBs$downstream[sort(wtNBs$downstream[,1]),2], NA, NA)
+rownames(wtNBMat) <- sort(wtNBs$downstream[,1])
+for(si in unique(wtNBs$upstream[,1]))
+	wtNBMat[si,2:3] <- wtNBs$upstream[wtNBs$upstream[,1] == si,2]
+wtNBMat[wtNBMat[,2] == wtNBMat[,3], 3] <- NA
+wtDistanceMatrix <- matrix(NA, nrow = nrow(wtNBMat), ncol = ncol(wtNBMat))
+for(i in 1:nrow(wtNBMat)) {
+	j <- match(as.character(wtNBMat[i,]), rownames(wtDmat))
+	wtDistanceMatrix[i,] <- wtDmat[j, i]
+}
+wtDistanceMatrix <- abs(wtDistanceMatrix)
 
 #################
 #
@@ -190,18 +188,22 @@ stanDat <- list(
 	nPressure = nrow(prDatInterp),
 	nPixels = nrow(sarantopouros$data),
 	nReaches = 1,
+	Q = sarantopouros[,'discharge'],
 	maxTime = ncol(watTempDatInterp),
 	DO = doDat[['dissolved oxygen']],
 	DOpixels = doDat[['pixelID']],
 	DOtimes = doDat[['minutes']],
 	waterTempMeasured = watTempDatInterp,
+	waterTempSiteIDs = waterTempSiteIDs,
+	waterTempNbs = wtNBMat,
+	waterTempDist = wtDistanceMatrix,
 	pressure = prDatInterp,
 	prElev = as.array(prElev),
 	dummyOsat = matrix(rnorm(length(prDatInterp)), nrow = nrow(prDatInterp), 
 		ncol=ncol(prDatInterp)))
 
 
-devtools::load_all()
+devtools::load_all(".")
 modCode <- stanc_builder(file = 
 	system.file("stan/nstation_reach_test.stan", package="NSmetabolism"))
 mod <- stan_model(stanc_ret = modCode)
