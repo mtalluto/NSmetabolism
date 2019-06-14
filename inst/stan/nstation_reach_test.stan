@@ -2,20 +2,12 @@ functions {
 	real kT(real temp, real k600);
 	real computeRF(real temp, real pressure, real DO, real k600);
 	real osat(real temp, real P);
-	// real computeAdvection(real inputDO, real outputDO, real Q, real area, real dx);
-	// real computeGPP(real PAR, real lP1, real lP2);
-	// real computeER(real temp, real ER24_20);
+	real computeAdvection(real inputDO, real outputDO, real Q, real area, real dx);
+	real computeGPP(real PAR, real lP1, real lP2);
+	real computeER(real temp, real ER24_20);
 
 	#include "functions.stan"
-	// real kT(real temp, real k600) {
-	// 	real Sc;
-	// 	// compute Schmidt number for oxygen
-	// 	// parameters from Wanninkhof 1992. appendix
-	// 	Sc = 1800.6 - 120.10 * temp + 3.7818 * temp^2 - 0.047608 * temp^3;
-		
-	// 	// Van de Bogert et al eqn 5
-	// 	return k600 * (Sc / 600)^-0.5;
-	// }
+
 
 	/**
 	 * Compute pressure at an elevation from pressure at a different elevation
@@ -104,17 +96,20 @@ functions {
 		return weighted_avg(vals, weights, 3);
 	}
 
-	// simple linear interpolation between two points
-	// x: two x points
-	// y: two y points
-	// xnew: location of the point to interpolate
-	// real approx(vector x, vector y, xnew) {
-	// 	if(xnew == x[1])
-	// 		return(y[1]);
-	// 	if(xnew == x[2])
-	// 		return(y[2]);
-	// 	return(y[1] + (xnew - x[1]) * ((y[2] - y[1])/(x[2] - x[1])));
-	// }
+	/**
+	 * simple linear interpolation between two points
+	 *
+	 * @param x two x points
+	 * @param y two y points
+	 * @param xnew location of the point to interpolate
+	*/
+	real approx(vector x, vector y, real xnew) {
+		if(xnew == x[1])
+			return(y[1]);
+		if(xnew == x[2])
+			return(y[2]);
+		return(y[1] + (xnew - x[1]) * ((y[2] - y[1])/(x[2] - x[1])));
+	}
 
 }
 
@@ -127,27 +122,21 @@ data {
 	int<lower = 1> nPixels; // number of pixels in the watershed
 	int<lower = 1> nReaches;
 
-	// site-level variables
+	real<lower=0> dt;		// length (in minutes) of a time step
 
-	// reach-level variables
-
-
-
-	// real<lower=0> dt;		// length (in minutes) of a time step
-
-	// // site characteristics
-	// vector<lower=0> [nSites] DOinitial;
+	// pixel characteristics
+	vector<lower=0> [nPixels] DOinitial;
 	vector<lower=0> [nPixels] Q;
-	// vector<lower=0> [nSites] area;
-	// vector<lower=0> [nSites] dx;
-	// vector<lower=0> [nSites] depth;
+	vector<lower=0> [nPixels] area;
+	vector<lower=0> [nPixels] dx;
+	vector<lower=0> [nPixels] depth;
 	vector [nPixels] elevation;
-	// int<lower=1, upper = nReaches> reachID [nSites];
+	int<lower=1, upper = nReaches> reachID [nPixels];
 	matrix [nPixels, 2] coords;
 
-	// // reach characteristics
-	// vector<lower = 0> [nReaches] slope;
-	// vector<lower = 0> [nReaches] velocity;
+	// reach characteristics
+	vector<lower = 0> [nReaches] slope;
+	vector<lower = 0> [nReaches] velocity;
 
 	/*
 		WATER TEMPERATURE
@@ -169,15 +158,15 @@ data {
 	int<lower = 0, upper = maxTime> DOtimes [nDO];
 	int<lower = 1, upper = nPixels> DOpixels [nDO];
 	
-	// // upstream sites; first column is for the main (larger) upstream pixel
-	// // second column will only be used for confluences; weight should be 0 for non-confluences
-	// matrix<lower=0> [nSites, 2] usWeight;
-	// int<lower = 1, upper = nSites> usNb [nSites, 2]; // neighbor indices for upstream pixels
+	// upstream sites; first column is for the main (larger) upstream pixel
+	// second column will only be used for confluences; weight should be 0 for non-confluences
+	matrix<lower=0> [nPixels, 2] usWeight;
+	int<lower = 1, upper = nPixels> usNb [nPixels, 2]; // neighbor indices for upstream pixels
 
-	// // lateral input for each site follows the same structure as upstream sites
-	// // there is a weight based on discharge and a value
-	// vector<lower = 0> [nSites] latWeight;
-	// vector<lower=0> [nSites] latInputDO;
+	// lateral input for each site follows the same structure as upstream sites
+	// there is a weight based on discharge and a value
+	vector<lower = 0> [nPixels] latWeight;
+	vector<lower=0> [nPixels] latInputDO;
 
 
 
@@ -188,10 +177,11 @@ data {
 	matrix<lower = 0> [nPressure, maxTime] pressure; // atmospheric pressure, in hPa (i.e., mbar)
 	vector [nPressure] prElev;
 
-/*
-	// data relating to light
+	/*
+		LIGHT
+	*/
 	int <lower = 1> nLightTimes;
-	matrix [nSites, nLightTimes] light;
+	matrix [nPixels, nLightTimes] light;
 	vector [nLightTimes] lightTimes;
 
 	// adjustable priors
@@ -199,7 +189,6 @@ data {
 	real logP1_pr_sd; // suggested from 1 station - sd of 1
 	real logP2_pr_mu; 
 	real logP2_pr_sd;
-*/
 }
 
 transformed data {
@@ -223,94 +212,86 @@ parameters {
 
 	real<lower = 0> sigma;
 	vector<lower=0> [nReaches] k600;
-	// vector [nReaches] lP1;
-	// vector [nReaches] lP2;
-	// vector<lower=0> [nReaches] ER24_20;
+	vector [nReaches] lP1;
+	vector [nReaches] lP2;
+	vector<lower=0> [nReaches] ER24_20;
 
 }
 
 transformed parameters {	
-	// matrix [nPixels, maxTime] gpp = rep_matrix(0, nPixels, maxTime);
-	// matrix [nPixels, maxTime] er = rep_matrix(0, nPixels, maxTime);
+	matrix [nPixels, maxTime] gpp = rep_matrix(0, nPixels, maxTime);
+	matrix [nPixels, maxTime] er = rep_matrix(0, nPixels, maxTime);
 	matrix [nPixels, maxTime] DOpr; 
-	// int ltTimeIndex = 1;
 
-	// for(si in 1:nSites) {
-	// 	DOpr[si,1] = DOinitial[si];
-	// }
+	for(pix in 1:nPixels) {
+		DOpr[pix,1] = DOinitial[pix];
+	}
+	{
+		int ltTimeIndex = 1;
 
-	for(ti in 2:maxTime) {
-		// if(lightTimes[ltTimeIndex] > ti)
-			// ltTimeIndex += 1;
-		for(pix in 1:nPixels) {
-			// real ddodt;
-			real rf;
-			// real inputDO;
-			// real adv;
-			real waterTemp;
-			// real pressure;
-			// real light;
-			int reach;
-			// int reach = reachID[si];
-			// vector [2] usMeasuredWaterTemp;
-			// vector [2] usWaterTempQ;
-			// real dsMeasuredWaterTemp;
-			real pixPressure;
-			// real siLight;
+		for(ti in 2:maxTime) {
+			real ctime = ti;
+			if(lightTimes[ltTimeIndex] > ti)
+				ltTimeIndex += 1;
+			for(pix in 1:nPixels) {
+				real ddodt;
+				real rf;
+				real inputDO;
+				real adv;
+				real waterTemp;
+				int reach = reachID[pix];
+				real pixPressure;
+				real pixLight;
 
-			/* 
-				deal with water temperature interpolation
-				this is a somewhat complicated index lookup so break out the indies a bit
-				for clarity
-			*/
-			{
-				int nbIDs [3] = waterTempNbs[pix, ];
-				int nbPixIDs [3] = waterTempSiteIDs[nbIDs];
-				waterTemp = idw_river(waterTempMeasured[nbIDs, ti], Q[nbPixIDs], 
-					to_vector(waterTempDist[pix, ]), Q[pix]);
+				/* 
+					deal with water temperature interpolation
+					this is a somewhat complicated index lookup so break out the indies a bit
+					for clarity
+				*/
+				{
+					int nbIDs [3] = waterTempNbs[pix, ];
+					int nbPixIDs [3] = waterTempSiteIDs[nbIDs];
+					waterTemp = idw_river(waterTempMeasured[nbIDs, ti], Q[nbPixIDs], 
+						to_vector(waterTempDist[pix, ]), Q[pix]);
+				}
+
+
+				// interpolate pressure
+				pixPressure = idw_pressure(pressureSeaLevel[,ti], to_vector(pressureDist[pix,]), 
+					elevation[pix], nPressure);
+
+				// interpolate light
+				pixLight = approx(lightTimes[ltTimeIndex:(ltTimeIndex+1)], 
+							to_vector(light[pix, ltTimeIndex:(ltTimeIndex+1)]), ctime);
+
+
+
+				// get input DO from upstream pixel(s)
+				// note that stan is somewhat inflexible
+				// for some sites to have 2 upstream pixels, ALL sites must have 2 upstream pixels
+				// this is handled by having a dummy upstream pixel with a weight of 0
+				inputDO = usWeight[pix,1] * DOpr[usNb[pix,1], ti-1] + 
+						usWeight[pix,2] * DOpr[usNb[pix,2], ti-1] + 
+				 		latWeight[pix] * latInputDO[pix];
+				adv = computeAdvection(inputDO, DOpr[pix, ti-1], Q[pix], area[pix], dx[pix]);
+
+				// note that all of these components, including ER, are constant at the reach scale
+				// finer resolution may be necessary in the future
+				rf = computeRF(waterTemp, pixPressure, DOpr[pix, ti-1], k600[reach]);
+				gpp[pix, ti] = computeGPP(pixLight, lP1[reach], lP2[reach]);
+				er[pix, ti] = computeER(waterTemp, ER24_20[reach]);
+				ddodt = adv + (gpp[pix, ti] + er[pix, ti] + rf) / depth[pix];
+				DO_pr[pix, ti] = DO_pr[pix, ti-1] + ddodt * dt;
 			}
-
-
-			// interpolate pressure
-			pixPressure = idw_pressure(pressureSeaLevel[,ti], to_vector(pressureDist[pix,]), 
-				elevation[pix], nPressure);
-
-			// interpolate light
-			// siLight = approx(lightTimes[ltTimeIndex:(ltTimeIndex+1)], 
-			// 			light[si, ltTimeIndex:(ltTimeIndex+1)], ti)
-
-			// get input DO from upstream pixel(s)
-			// note that stan is somewhat inflexible
-			// for some sites to have 2 upstream pixels, ALL sites must have 2 upstream pixels
-			// this is handled by having a dummy upstream pixel with a weight of 0
-			// inputDO = usWeight[si,1] * DOpr[usNb[si,1], ti-1] + 
-			// 		usWeight[si,2] * DOpr[usNb[si,2], ti-1] + 
-			// 		latWeight[si] * latInputDO[si];
-
-			// adv = computeAdvection(inputDO, DOpr[si, ti-1], Q[si], area[si], dx[si]);
-
-			// note that all of these components, including ER, are constant at the reach scale
-			// finer resolution may be necessary in the future
-
-			// BEGIN GARBAGE TESTING CODE
-				DOpr[pix, ti-1] = DO[1];
-				reach = 1;
-			// END GARBAGE
-
-			rf = computeRF(waterTemp, pixPressure, DOpr[pix, ti-1], k600[reach]);
-			// gpp[si, ti] = computeGPP(siLight, lP1[reach], lP2[reach]);
-			// er[si, ti] = computeER(waterTemp, ER24_20[reach]);
-			// ddodt = adv + (gpp[si, ti] + er[si, ti] + rf) / depth[si];
-			// DO_pr[si, ti] = DO_pr[si, ti-1] + ddodt * dt;
 		}
 	}
 }
 model {
 
-	// for(i in 1:nDO) {
-	// 	DO[i] ~ normal(DOpr[DOpixels[i], DOtimes[i]], sigma);
-	// }
-/*
+	for(i in 1:nDO) {
+		DO[i] ~ normal(DOpr[DOpixels[i], DOtimes[i]], sigma);
+	}
+
 	for(i in 1:nReaches) {
 		k600[i] ~ normal((1162 * pow(slope[i], 0.77) * pow(velocity[i], 0.85))/(24*60),
 				0.0001462944 + 0.0012564499 * slope[i] + 0.0124307051 * velocity[i] + 
@@ -320,5 +301,5 @@ model {
 	lP1 ~ normal(logP1_pr_mu, logP1_pr_sd);
 	lP2 ~ normal(logP2_pr_mu, logP2_pr_sd);
 	ER24_20 ~ normal(0, 10);
-	*/
+
 }

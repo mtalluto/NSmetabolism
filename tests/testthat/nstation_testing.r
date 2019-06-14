@@ -1,49 +1,13 @@
 
 "	DATA TO DEAL WITH
 
-	int<lower = 1> nReaches;
 	real<lower=0> dt;		// length (in minutes) of a time step
-
 	vector<lower=0> [nSites] DOinitial;
-	vector<lower=0> [nSites] area;
-	vector<lower=0> [nSites] dx;
-	vector<lower=0> [nSites] depth;
-	int<lower=1, upper = nReaches> reachID [nSites];
-
-	vector<lower = 0> [nReaches] slope;
-	vector<lower = 0> [nReaches] velocity;
-
-	
-	matrix<lower=0> [nSites, 2] usWeight;
-	int<lower = 1, upper = nSites> usNb [nSites, 2]; // neighbor indices for upstream pixels
-
 	vector<lower = 0> [nSites] latWeight;
 	vector<lower=0> [nSites] latInputDO;
 
-
-	int <lower = 1> nLightTimes;
-	matrix [nSites, nLightTimes] light;
-	vector [nLightTimes] lightTimes;
-
-	real logP1_pr_mu; // suggested from 1 station - mean of 9
-	real logP1_pr_sd; // suggested from 1 station - sd of 1
-	real logP2_pr_mu; 
-	real logP2_pr_sd;
-
-"
-
-"	functions to test
-	real computeAdvection(real inputDO, real outputDO, real Q, real area, real dx);
-	real computeGPP(real PAR, real lP1, real lP2);
-	real computeER(real temp, real ER24_20);
-
-	real approx(vector x, vector y, xnew) {
-
-
 	ALSO TEST 
-		transformed_data (can do in line with functions where appropriate)
 		transformed_parameters
-		finally model
 "
 
 library(RSQLite)
@@ -60,8 +24,11 @@ library(rstan)
 setwd("~/work/packages/NSmetabolism")
 devtools::load_all("../WatershedTools")
 
-dbPath <- "~/work/projects/metabolism/metabolismDB/metabolism.sqlite"
-gisPath <- "~/work/projects/metabolism/catchment_delineations/vjosa/res/"
+# dbPath <- "~/work/projects/metabolism/metabolismDB/metabolism.sqlite"
+# gisPath <- "~/work/projects/metabolism/catchment_delineations/vjosa/res/"
+dbPath <- "~/work/projects/metabolismDB/metabolism.sqlite"
+gisPath <- "~/work/projects/catchment_delineations/vjosa/res/"
+lightPath <- "/Volumes/Data/vjosa_sun/"
 
 vjosa <- readRDS(file.path(gisPath, "vjosaWatershedSpring2018.rds"))
 
@@ -180,6 +147,68 @@ qry <- "SELECT x,y,siteName FROM sites"
 prCoords <- data.table(dbGetQuery(metabDB, qry))
 prCoords <- prCoords[siteName %in% rownames(prDatMat), .(x, y)]
 
+#################
+#
+#  LIGHT
+#
+#################
+
+# parse the day numbers into dates to look for light files
+# ltFiles <- as.vector(sapply(paste0("vj_irradiance_d", unique(yday(doDat$time)), "_.+\\.tif"), 
+# 	function(x) list.files(lightPath, pattern = x, full.names = TRUE)))
+# light <- stack(ltFiles)
+# # grab times out of file names, construct into proper date objects
+# dt <- date("2017-12-31") + as.integer(sub(".+_d([0-9]+)_.+\\.tif", "\\1", ltFiles))
+# hr <- sub(".+_t([0-9]+)_.+\\.tif", "\\1", ltFiles)
+# mn <- ceiling(60*(as.integer(
+# 	sub("^0$", "00", sub(".+_t[0-9]+_([0-9]+)\\.tif", "\\1", ltFiles)))/100))
+# lightTimes <- ymd_hm(paste(dt, paste(hr, mn, sep=':')), tz = "Europe/Tirane")
+# lightMins <- 1 + (as.integer(lightTimes) - min(allDat$timestamp)) / 60
+# lightVals <- raster::extract(light, sarantopouros$data[,c('x', 'y')])
+# rownames(lightVals) <- sarantopouros[,'id']
+# colnames(lightVals) <- lightMins
+
+# # need to add 0s during night
+# # miuntes digit
+# mDigit <- min(lightMins) - round(min(lightMins), -1)
+# minsExpected <- expand.grid(id = sarantopouros[,'id'], 
+# 	minute = seq(mDigit, max(doDat$minutes), 10))
+# minsExpected$noLight <- 0
+
+# lvTall <- melt(lightVals, varnames = c("id", "minute"))
+# lvTallMerge <- merge(lvTall, minsExpected, all = TRUE, by = c('id', 'minute'))
+# lvTallMerge$value[is.na(lvTallMerge$value)] <- lvTallMerge$noLight[is.na(lvTallMerge$value)]
+# lightVals <- acast(lvTallMerge, id ~ minute, value.var = "value")
+# saveRDS(lightMins, "inst/testdata/lightMins.rds")
+# saveRDS(lightVals, "inst/testdata/lightVals.rds")
+
+lightVals <- readRDS(system.file('testdata/lightVals.rds', package="NSmetabolism"))
+lightMins <- readRDS(system.file('testdata/lightMins.rds', package="NSmetabolism"))
+
+
+#############
+#
+# PIXEL NEIGHBORS & LATERAL INPUT
+#
+##############
+adjTall <- (which(sarantopouros$adjacency == 1, arr.ind = TRUE))
+usNb <- t(sapply(sarantopouros[,'id'], function(i) {
+	vals <- adjTall[adjTall[,1] == i, 2]
+	if(length(vals) == 0) {
+		c(NA, NA)
+	} else if(length(vals) == 1) {
+		c(vals, NA)
+	} else
+		vals
+}))
+usWeight <- usNb
+usWeight[,1] <- sarantopouros[usNb[,1], 'discharge']
+usWeight[,2] <- sarantopouros[usNb[,2], 'discharge']
+usWeight[is.na(usWeight)] <- 0
+
+# we compute the weight for lateral input as the difference between focal and upstream discharge
+latWeight <- sarantopouros[,'discharge'] - rowSums(usWeight)
+
 stanDat <- list(
 	nDO = nrow(doDat),
 	nSites = nrow(watTempDatInterp),
@@ -189,6 +218,22 @@ stanDat <- list(
 	coords = sarantopouros[,c('x', 'y')],
 	elevation = sarantopouros[,'elevation'],
 	Q = sarantopouros[,'discharge'],
+	reachID = sarantopouros[,'reachID'],
+	depth = sarantopouros[,'depth'],
+	area = sarantopouros[,'width']*sarantopouros[,'depth'],
+	dx = sarantopouros[,'length'],
+	usWeight = usWeight,
+	usNb = usNb,
+	latWeight = latWeight,
+	latInputDO = 0,
+	light = lightVals,
+	lightTimes = lightMins,
+	logP1_pr_mu = 9,
+	logP2_pr_mu = 9,
+	logP1_pr_sd = 1,
+	logP2_pr_sd = 1,
+	slope = tapply(sarantopouros[,'slope'], sarantopouros[,'reachID'], mean),
+	velocity = tapply(sarantopouros[,'velocity'], sarantopouros[,'reachID'], mean),
 	maxTime = ncol(watTempDatInterp),
 	DO = doDat[['dissolved oxygen']],
 	DOpixels = doDat[['pixelID']],
@@ -201,7 +246,8 @@ stanDat <- list(
 	prCoords = prCoords,
 	prElev = as.array(prElev),
 	dummyOsat = matrix(rnorm(length(prDatInterp)), nrow = nrow(prDatInterp), 
-		ncol=ncol(prDatInterp)))
+		ncol=ncol(prDatInterp)),
+	dt = 1)
 
 
 devtools::load_all(".")

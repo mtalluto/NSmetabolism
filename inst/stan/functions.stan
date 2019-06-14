@@ -1,4 +1,4 @@
-// functions{
+ // functions{
 /**
   * Computes reaeration flux
   *
@@ -52,13 +52,20 @@ real osat(real temp, real P) {
 	return Cstaro * ((Patm - Pwv) * (1 - theta * Patm)) / ((1 - Pwv) * (1 - theta));
 }
 
-/*
+
+/**
+  * Compute transport component
+  * @param inputDO dissolved oxygen concentration of input water
+  * @param outputDO dissolved oxygen concentration of focal pixel
+  * @param Q discharge
+  * @param area cross sectional area
+  * @param dx length of pixel
+*/
 real computeAdvection(real inputDO, real outputDO, real Q, real area, real dx) {
 	real inputMass = Q * inputDO;
 	real outputMass = Q * outputDO;
 	return (-1/area) * (outputMass - inputMass)/dx;
 }
-*/
 
 /**
   * Compute gas transfer velocity for oxygen at a given temperature
@@ -81,20 +88,31 @@ real kT(real temp, real k600) {
 	return k600 * (Sc / 600)^-0.5;
 }
 
-// real computeGPP(real PAR, real lP1, real lP2) {
-// 	real lGPP;
-// 	if(PAR == 0)
-// 		return 0;
+/**
+  * Compute GPP from light
+  * @param PAR Photosynthetically active radiation, in W/m^2 
+  * @param lP1 The log of the slope of the PI curve
+  * @param lP2 The log of the saturation term of the PI curve
+*/
+real computeGPP(real PAR, real lP1, real lP2) {
+	real lGPP;
+	if(PAR == 0)
+		return 0;
 
-// 	// Uehlinger et al 2000 eq 3b
-// 	// GPP = PAR/(P1 + P2 * PAR)
-// 	lGPP = log(PAR) - log_sum_exp(lP1, lP2 + log(PAR));
+	// Uehlinger et al 2000 eq 3b
+	// GPP = PAR/(P1 + P2 * PAR)
+	lGPP = log(PAR) - log_sum_exp(lP1, lP2 + log(PAR));
 
-// 	return exp(lGPP);
-// }
+	return exp(lGPP);
+}
 
-// real computeER(real temp, real ER24_20) {
-// 	return (ER24_20 / (60*24)) * (1.045^(temp - 20));
-// }
+/**
+  * Compute ecosystem respiration at a given temperature
+  * @param temp Water temperature (degrees C)
+  * @param ER24_20 Ecosystem respiration rate for a 24-hour period at 20 degrees
+*/
+real computeER(real temp, real ER24_20) {
+	return (ER24_20 / (60*24)) * (1.045^(temp - 20));
+}
 
 // }
