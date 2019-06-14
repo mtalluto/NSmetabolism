@@ -146,12 +146,12 @@ data {
 	matrix [nSites, maxTime] waterTempMeasured;
 	// for water temperature, for each pixel/site, we keep track of 2 upstream neigbors 
 	// (indices 2:3), and a downstream neighbor (index 1); we also track the distance to each
-	int <lower = 1, upper = nSites> waterTempNbs [nPixels, 3] ; 
-	matrix <lower = 1, upper = nSites> [nPixels, 3] waterTempDist;
+	int <lower = 1, upper = nPixels> waterTempNbs [nPixels, 3] ; 
+	matrix [nPixels, 3] waterTempDist;
 	// for each site where temperature is measured, we have the measurement, as well
 	// as that site's pixelID so we can get back to discharge and other data
 	int <lower =1 , upper = nPixels> waterTempSiteIDs [nSites]; // pointer back to pixelID
-
+	int <lower = 1, upper = nSites> waterTempIndices [nPixels, 3] ;
 
 
 	vector<lower = 0> [nDO] DO;
@@ -165,7 +165,7 @@ data {
 
 	// lateral input for each site follows the same structure as upstream sites
 	// there is a weight based on discharge and a value
-	vector<lower = 0> [nPixels] latWeight;
+	vector [nPixels] latWeight;
 	vector<lower=0> [nPixels] latInputDO;
 
 
@@ -219,6 +219,10 @@ parameters {
 }
 
 transformed parameters {	
+
+}
+model {
+	{
 	matrix [nPixels, maxTime] gpp = rep_matrix(0, nPixels, maxTime);
 	matrix [nPixels, maxTime] er = rep_matrix(0, nPixels, maxTime);
 	matrix [nPixels, maxTime] DOpr; 
@@ -250,9 +254,8 @@ transformed parameters {
 				*/
 				{
 					int nbIDs [3] = waterTempNbs[pix, ];
-					int nbPixIDs [3] = waterTempSiteIDs[nbIDs];
-					waterTemp = idw_river(waterTempMeasured[nbIDs, ti], Q[nbPixIDs], 
-						to_vector(waterTempDist[pix, ]), Q[pix]);
+					waterTemp = idw_river(waterTempMeasured[waterTempIndices[pix,], ti], 
+						Q[nbIDs], to_vector(waterTempDist[pix, ]), Q[pix]);
 				}
 
 
@@ -274,24 +277,24 @@ transformed parameters {
 						usWeight[pix,2] * DOpr[usNb[pix,2], ti-1] + 
 				 		latWeight[pix] * latInputDO[pix];
 				adv = computeAdvection(inputDO, DOpr[pix, ti-1], Q[pix], area[pix], dx[pix]);
-
+				print(adv);
 				// note that all of these components, including ER, are constant at the reach scale
 				// finer resolution may be necessary in the future
 				rf = computeRF(waterTemp, pixPressure, DOpr[pix, ti-1], k600[reach]);
+				print(rf);
 				gpp[pix, ti] = computeGPP(pixLight, lP1[reach], lP2[reach]);
+				print(gpp[pix, ti]);
 				er[pix, ti] = computeER(waterTemp, ER24_20[reach]);
+				print(er[pix, ti]);
 				ddodt = adv + (gpp[pix, ti] + er[pix, ti] + rf) / depth[pix];
-				DO_pr[pix, ti] = DO_pr[pix, ti-1] + ddodt * dt;
+				DOpr[pix, ti] = DOpr[pix, ti-1] + ddodt * dt;
 			}
 		}
 	}
-}
-model {
-
 	for(i in 1:nDO) {
 		DO[i] ~ normal(DOpr[DOpixels[i], DOtimes[i]], sigma);
 	}
-
+}
 	for(i in 1:nReaches) {
 		k600[i] ~ normal((1162 * pow(slope[i], 0.77) * pow(velocity[i], 0.85))/(24*60),
 				0.0001462944 + 0.0012564499 * slope[i] + 0.0124307051 * velocity[i] + 

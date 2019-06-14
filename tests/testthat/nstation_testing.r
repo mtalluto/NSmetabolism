@@ -129,6 +129,7 @@ for(i in 1:nrow(wtNBMat)) {
 	wtDistanceMatrix[i,] <- wtDmat[j, i]
 }
 wtDistanceMatrix <- abs(wtDistanceMatrix)
+waterTempIndices <- apply(wtNBMat, 2, function(x) match(x, waterTempSiteIDs))
 
 #################
 #
@@ -209,12 +210,57 @@ usWeight[is.na(usWeight)] <- 0
 # we compute the weight for lateral input as the difference between focal and upstream discharge
 latWeight <- sarantopouros[,'discharge'] - rowSums(usWeight)
 
+
+#############
+#
+# STARTING VALUES FOR DO
+#
+##############
+DOinitial <- NA * numeric(nrow(sarantopouros$data))
+doi <- t(sapply(unique(doDat$pixelID), function(id) {
+	i <- doDat$pixelID == id
+	c(id, doDat[['dissolved oxygen']][i & doDat$minutes == min(doDat$minutes[i])])
+}))
+
+# we already have distance matrix and nearest neighbors, so use those
+# first, handle sites that actually have observations
+DOinitial[doi[,1]] <- doi[,2]
+
+# now anything with only one neighbor; just set to neighbor value
+i <- apply(wtDistanceMatrix, 1, function(x) is.na(x[2] & is.na(x[3]))) & is.na(DOinitial)
+DOinitial[i] <- wtDistanceMatrix[i,1]
+
+# for the rest, inverse distance weighting with discharge ratio
+i <- is.na(DOinitial)
+wts <- apply(wtNBMat, 2, function(x) sarantopouros[,'discharge'][x])
+wts <- apply(wts, 2, function(x) x/sarantopouros[,'discharge'])
+# upstream is always on the numerator
+wts[,1] <- 1/wts[,1]
+wts <- wts / (wtDistanceMatrix^2)
+wts[is.na(wts)] <- 0
+wts <- wts / rowSums(wts)
+vals <- wts * apply(wtNBMat, 2, function(x) doi[match(x, doi[,1]),2])
+vals[is.na(vals)] <- 0
+vals <- rowSums(vals)
+DOinitial[i] <- vals[i]
+
+
+
+## take care of NAs in data; this is SUPER hacky and I should make this better
+for(i in 2:3) {
+	j <- is.na(wtNBMat[,i])
+	wtNBMat[j,i] <- wtNBMat[j,1]
+	j <- is.na(wtDistanceMatrix[,i])
+	wtDistanceMatrix[j,i] <- wtDistanceMatrix[j,1]
+}
+usNb[is.na(usNb)] <- 1
 stanDat <- list(
 	nDO = nrow(doDat),
 	nSites = nrow(watTempDatInterp),
 	nPressure = nrow(prDatInterp),
 	nPixels = nrow(sarantopouros$data),
-	nReaches = 1,
+	nReaches = length(unique(sarantopouros[,'reachID'])),
+	nLightTimes = ncol(lightVals),
 	coords = sarantopouros[,c('x', 'y')],
 	elevation = sarantopouros[,'elevation'],
 	Q = sarantopouros[,'discharge'],
@@ -222,12 +268,13 @@ stanDat <- list(
 	depth = sarantopouros[,'depth'],
 	area = sarantopouros[,'width']*sarantopouros[,'depth'],
 	dx = sarantopouros[,'length'],
+	DOinitial = DOinitial,
 	usWeight = usWeight,
 	usNb = usNb,
 	latWeight = latWeight,
-	latInputDO = 0,
+	latInputDO = rep(0, length(latWeight)),
 	light = lightVals,
-	lightTimes = lightMins,
+	lightTimes = as.integer(colnames(lightVals)),
 	logP1_pr_mu = 9,
 	logP2_pr_mu = 9,
 	logP1_pr_sd = 1,
@@ -242,6 +289,7 @@ stanDat <- list(
 	waterTempSiteIDs = waterTempSiteIDs,
 	waterTempNbs = wtNBMat,
 	waterTempDist = wtDistanceMatrix,
+	waterTempIndices = waterTempIndices,
 	pressure = prDatInterp,
 	prCoords = prCoords,
 	prElev = as.array(prElev),
