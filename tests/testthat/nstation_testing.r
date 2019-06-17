@@ -1,14 +1,4 @@
 
-"	DATA TO DEAL WITH
-
-	real<lower=0> dt;		// length (in minutes) of a time step
-	vector<lower=0> [nSites] DOinitial;
-	vector<lower = 0> [nSites] latWeight;
-	vector<lower=0> [nSites] latInputDO;
-
-	ALSO TEST 
-		transformed_parameters
-"
 
 library(RSQLite)
 library(sp)
