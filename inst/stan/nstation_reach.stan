@@ -40,7 +40,7 @@ functions {
 		vector [n] res;
 		normWts = weights / sum(weights);
 		for(i in 1:n)
-			res[i] = vals[i] * weights[i];
+			res[i] = vals[i] * normWts[i];
 		return sum(res);
 	}
 
