@@ -109,7 +109,8 @@ calibStan <- function(data, nsamples, model, dt, ...) {
 		stop("Model ", model, " is not implemented yet")
 	}
 
-
-	fit <- rstan::stan(file, data = stanDat, iter=nsamples, ...)
+	modCode <- stanc_builder(file = file)
+	mod <- stan_model(stanc_ret = modCode)
+	fit <- sampling(mod, data = stanDat, iter = nsamples, ...)
 	return(fit)
 }

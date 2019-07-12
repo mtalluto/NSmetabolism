@@ -1,4 +1,8 @@
 functions {
+	real computeGPP(real PAR, real lP1, real lP2);
+
+	#include "functions.stan"
+
 	real osat(real temp, real P) {	
 		real tempK;
 		real Cstaro;
@@ -49,7 +53,7 @@ data {
 
 	vector<lower=0> [nDO] DO; // DO Observations
 	int<lower = 1> time [nDO]; // time of each DO observation, in minutes
-	real<lower=0> DOinitial; // initial value DO
+	real<lower = 0> DO_initial; // estimate of DO concentration at time = 1
 
 	int<lower = max(time)> maxTime; // latest time at which we want predictions
 	vector [maxTime] temp;
@@ -69,13 +73,14 @@ parameters {
 	real<upper=0> ER24_20;
 	real<lower=0> k600;
 	real<lower=0> sigma;
+	real<lower=0> DO_i; // initial value DO
 }
 transformed parameters {
 	vector [maxTime] gpp = rep_vector(0, maxTime);
 	vector [maxTime] er = rep_vector(0, maxTime);
 	vector [maxTime] DO_pr; 
 
-	DO_pr[1] = DOinitial;
+	DO_pr[1] = DO_i;
 	for(i in 2:maxTime) {
 		real ddodt;
 		real rf;
@@ -94,5 +99,6 @@ model {
 	lP1 ~ normal(9, 1);
 	lP2 ~ normal(9, 1);
 	ER24_20 ~ normal(0, 10);
+	DO_i ~ normal(DO_initial, sigma);
 }
 
