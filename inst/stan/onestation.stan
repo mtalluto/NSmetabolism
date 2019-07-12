@@ -36,21 +36,6 @@ functions {
 		return k600 * (Sc / 600)^-0.5;
 	}
 
-	real computeGPP(real PAR, real lP1, real lP2) {
-		real lGPP;
-		if(PAR == 0)
-			return 0;
-
-		// Uehlinger et al 2000 eq 3b
-		// GPP = PAR/(P1 + P2 * PAR)
-		if(lP2 == 0) {
-			lGPP = log(PAR) - lP1;
-		} else {
-			lGPP = log(PAR) - log_sum_exp(lP1, lP2 + log(PAR));
-		}
-		return exp(lGPP);
-	}
-
 	real computeRF(real temp, real pressure, real DO, real k600) {
 		return kT(temp, k600) * (osat(temp, pressure) - DO);
 	}
@@ -79,8 +64,8 @@ data {
 }
 
 parameters {
-	real<lower=0> lP1;
-	real<lower=0> lP2; 
+	real lP1;
+	real lP2; 
 	real<upper=0> ER24_20;
 	real<lower=0> k600;
 	real<lower=0> sigma;
