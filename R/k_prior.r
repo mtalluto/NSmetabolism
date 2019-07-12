@@ -5,7 +5,8 @@
 #' 	equation 3.
 #' 
 #' The prior for k is defined as:
-#' 		$\mu = a \times S^{b_s} \times V^{b_v}$
+#' 
+#' 		\deqn {\mu = a \times S^{b_s} \times V^{b_v} }
 #' 		$\sigma = a_{se} + b_{sse} \times S + b_{vse} \times V + b_{svse} \times S \times V
 #' where S is the slope (unitless, rise over run) and V is the velocity (m/s).
 #' 
