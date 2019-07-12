@@ -5,7 +5,7 @@
 #' 	equation 3.
 #' 
 #' The prior for k is defined as:
-#' 		$\mu = a \times S^{b_s} \times V^{b_v}$
+#' 		\deqn {\mu = a \times S^{b_s} \times V^{b_v} }
 #' 		$\sigma = a_{se} + b_{sse} \times S + b_{vse} \times V + b_{svse} \times S \times V
 #' where S is the slope (unitless, rise over run) and V is the velocity (m/s).
 #' 
@@ -16,18 +16,20 @@
 #' @keywords internal
 k_prior_sim <- function()
 {
+	# parameters for predictive model of k
 	a_mu <- 1162
-	a_se <- 192/1.96
+	a_se <- 192
 	bs_mu <- 0.77
-	bs_se <- 0.028/1.96
+	bs_se <- 0.028
 	bv_mu <- 0.85
-	bv_se <- 0.045/1.96
+	bv_se <- 0.045
 
 
+	# account for model error; this is the regression of k_predict vs k_observed
 	ak_mu <- 0.91 
-	ak_se <- 0.24/1.96
+	ak_se <- 0.24
 	bk_mu <- 0.91
-	bk_se <- 0.036/1.96
+	bk_se <- 0.036
 
 	getK_pre <- function(S, V, a, bs, bv) {
 		a * S^bs * V^bv
@@ -36,12 +38,14 @@ k_prior_sim <- function()
 	getK_tru <- function(k, ak, bk) {
 		ak + bk * k
 	}
+
+	# velocity and slope values at which to do sims
 	VV <- seq(0.05, 1, length.out = 100)
 	SS <- seq(0.0001, 0.1, length.out = 100)
 
 	vs <- as.matrix(expand.grid(V=VV, S=SS))
 
-
+	# random set of parameters assuming total independence
 	a <- rnorm(1000, a_mu, a_se)
 	bs <- rnorm(1000, bs_mu, bs_se)
 	bv <- rnorm(1000, bv_mu, bv_se)
@@ -58,12 +62,13 @@ k_prior_sim <- function()
 
 	library(reshape2)
 	res2 <- melt(res, id.vars = c("S", "V"))
-	res2$value <- res2$value / (24*60) ## convert from m/day to m/min
+	# res2$value <- res2$value / (24*60) ## convert from m/day to m/min
 
 	ksds <- dcast(res2, S + V ~ variable, value.var=c('value'), fun.aggregate=sd)
 
 	# lots of variation in the standard error
 	# fortunately, not that much difference in the predict vs true, so we will use smaller predict
+	# this as it turns out produces LARGER estimates of the se, which is desirable
 	range(ksds$Kpredict)
 	range(ksds$Ktrue)
 

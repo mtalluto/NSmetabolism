@@ -1,5 +1,7 @@
 functions {
 	real computeGPP(real PAR, real lP1, real lP2);
+	real k_mu(real slope, real velocity);
+	real k_sd(real slope, real velocity);
 
 	#include "functions.stan"
 
@@ -95,7 +97,7 @@ model {
 	for(i in 1:nDO) {
 		DO[i] ~ normal(DO_pr[time[i]], sigma);
 	}
-	k600 ~ normal((1162 * pow(slope, 0.77) * pow(velocity, 0.85))/(24*60), 0.0001462944 + 0.0012564499 * slope + 0.0124307051 * velocity + 0.0961094198 * slope * velocity);
+	k600 ~ normal(k_mu(slope, velocity), k_sd(slope, velocity));
 	lP1 ~ normal(9, 1);
 	lP2 ~ normal(9, 1);
 	ER24_20 ~ normal(0, 10);
