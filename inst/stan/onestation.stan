@@ -1,54 +1,13 @@
 functions {
+	real computeRF(real temp, real pressure, real DO, real k600);
+	real osat(real temp, real P);
+	real kT(real temp, real k600);
 	real computeGPP(real PAR, real lP1, real lP2);
+	real computeER(real temp, real ER24_20);
 	real k_mu(real slope, real velocity);
 	real k_sd(real slope, real velocity);
 
 	#include "functions.stan"
-
-	real osat(real temp, real P) {	
-		real tempK;
-		real Cstaro;
-		real theta;
-		real Pwv;
-
-		tempK = temp + 273.15;
-
-		// C*o, the unit standard atmospheric concentration by volume for oxygen; in mg/kg
-		// eqn 31 from Benson and Krause 1984.
-		Cstaro = exp(-1.3874202e2 + (1.572288e5 / tempK) - (6.637149e7 / tempK^2) + 
-					(1.243678e10 / tempK^3) - (8.621061e11 / tempK^4));
-
-		// eqn 13, 
-		// the negative of the second pressure coefficient in the virial expansion for  gas 
-		// the real behavior of oxygen.
-		theta = 0.000975 - 1.426e-5 * temp + 6.436e-8 * temp^2;
-
-		// eqn 23
-		// the saturated vapor pressure of water in atmospheres at the temperature of equilibrium.
-		// in atmospheres
-		Pwv = exp(11.8571 - (3840.7 / tempK) - (216961 / tempK^2));
-
-		// eqn 28
-		return Cstaro * ((P - Pwv) * (1 - theta * P)) / ((1 - Pwv) * (1 - theta));
-	}
-
-	real kT(real temp, real k600) {
-		real Sc;
-		// compute Schmidt number for oxygen
-		// parameters from Wanninkhof 1992. appendix
-		Sc = 1800.6 - 120.10 * temp + 3.7818 * temp^2 - 0.047608 * temp^3;
-		
-		// Van de Bogert et al eqn 5
-		return k600 * (Sc / 600)^-0.5;
-	}
-
-	real computeRF(real temp, real pressure, real DO, real k600) {
-		return kT(temp, k600) * (osat(temp, pressure) - DO);
-	}
-
-	real computeER(real temp, real ER24_20) {
-		return (ER24_20 / (60*24)) * (1.045^(temp - 20));
-	}
 }
 data {
 	int<lower = 1> nDO; // DO number of observations;
@@ -98,9 +57,10 @@ model {
 		DO[i] ~ normal(DO_pr[time[i]], sigma);
 	}
 	k600 ~ normal(k_mu(slope, velocity), k_sd(slope, velocity));
-	lP1 ~ normal(9, 1);
-	lP2 ~ normal(9, 1);
+	lP1 ~ normal(9, 3); // considering the log scale, these are VERY weakly informative
+	lP2 ~ normal(9, 3); // considering the log scale, these are VERY weakly informative
 	ER24_20 ~ normal(0, 10);
+	sigma ~ normal(0, 10);
 	DO_i ~ normal(DO_initial, sigma);
 }
 

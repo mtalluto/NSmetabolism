@@ -19,8 +19,8 @@ variance for the informative prior for k used in the model. Parameters from Raym
 equation 3.
 
 The prior for k is defined as:
-$\mu = a \times S^{b_s} \times V^{b_v}$
-$\sigma = a_{se} + b_{sse} \times S + b_{vse} \times V + b_{svse} \times S \times V
+\deqn{\mu = a \times S^{b_s} \times V^{b_v}}{}
+\deqn{\sigma = a_{se} + b_{sse} \times S + b_{vse} \times V + b_{svse} \times S \times V}
 where S is the slope (unitless, rise over run) and V is the velocity (m/s).
 }
 \references{

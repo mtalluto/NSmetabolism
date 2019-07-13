@@ -44,7 +44,7 @@ GPP is linear with light intensity instead of saturating
 }
 \references{
 Fuß, T. et al. (2017). Land use controls stream ecosystem metabolism by shifting
-dissolved organic matter and nutrient regimes. \emph{Freshw Biol} \strong{62}:582–599. \newline
-Van de Bogert MC et al. 2007. Assessing pelagic and benthic metabolism using free
-water measurements. \emph{Limnol. Oceanogr. Methods} \strong{5}:145–155.
+dissolved organic matter and nutrient regimes. \emph{Freshw Biol} \strong{62}:582–599.\preformatted{ Van de Bogert MC et al. 2007. Assessing pelagic and benthic metabolism using free
+	 water measurements. *Limnol. Oceanogr. Methods* **5**:145–155. 
+}
 }
