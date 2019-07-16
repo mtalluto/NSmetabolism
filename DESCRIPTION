@@ -1,6 +1,6 @@
 Package: NSmetabolism
 Title: N-Station Stream Metabolism Modelling
-Version: 0.4.0
+Version: 0.4.0.9000
 Authors@R: 
     person(given = "Matthew",
            family = "Talluto",
@@ -11,9 +11,10 @@ License: MIT + file "Licence"
 Encoding: UTF-8
 LazyData: true
 Imports:
-	lubridate,
-	raster,
-	sp
+    lubridate,
+    raster,
+    sp,
+    Rcpp
 Suggests: 
     testthat,
     data.table,
@@ -25,3 +26,5 @@ Suggests:
     rstan
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 6.1.1
+LinkingTo: 
+    Rcpp
