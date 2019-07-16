@@ -22,6 +22,7 @@ DOCalibration <- function(initial, data, model = c('onestation', 'twostation', '
 	method <- match.arg(method)
 
 	if(method == 'laplace') {
+		stop("Laplace approximation is deprecated; use method = 'stan' instead")
 		calib <- calibLaplace(initial, data, model, nsamples, prior)
 	} else if(method == 'stan') {
 		calib <- calibStan(data, nsamples, model, dt, ...)

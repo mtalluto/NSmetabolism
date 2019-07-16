@@ -29,6 +29,7 @@
 #' @export
 oneStation_dDOdt <- function(t, y, parms, data, return_list=FALSE)
 {
+	warning("oneStation_dDOdt is deprecated; use DOCalibration(..., method = 'stan' instead)")
 	# gross primary production; Fuß et al eq 2
 	GPP <- gpp(data$PAR(t), parms['P1'], parms['P2'])
 
@@ -74,6 +75,7 @@ oneStation_dDOdt <- function(t, y, parms, data, return_list=FALSE)
 #' @export
 oneStation_DOPredict <- function(initial, times, params, data, dt = 1, 
 			method=c('euler', 'lsoda'), gpp = FALSE) {
+	warning("oneStation_DOPredict is deprecated; use DOCalibration(..., method = 'stan' instead)")
 	method <- match.arg(method)
 	if(method == "lsoda" && !(requireNamespace("deSolve")))
 		stop("Package deSolve is required for method lsoda; please install it and try again")
@@ -139,6 +141,7 @@ oneStation_DOPredict <- function(initial, times, params, data, dt = 1,
 #' @return The unnormalized log probability of the model given the data
 #' @export
 oneStation_DOlogprob <- function(params, data, prior = list(), ...) {
+	warning("oneStation_DOlogprob is deprecated; use DOCalibration(..., method = 'stan' instead)")
 	# check for each parameter, assign default priors if not specified
 	trParNames <- c('logP1', 'logP2', 'logk600', 'logMinusER24_20', 'logsd')
 	parNames <- c('P1', 'P2', 'k600', 'ER24_20', 'sd')
