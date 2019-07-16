@@ -1,17 +1,4 @@
- // functions{
-/**
-  * Computes reaeration flux
-  *
-  * @param temp Water temperature (degrees C)
-  * @param pressure Atmospheric pressure (hPa)
-  * @param DO dissolved oxygen concentration, mg/L
-  * @param k600 Gas transfer coefficient for Schmidt number of 600
-  * @return computed rearation flux
-*/
-
-real computeRF(real temp, real pressure, real DO, real k600) {
-	return kT(temp, k600) * (osat(temp, pressure) - DO);
-}
+functions{
 
 /**
   * Compute oxygen saturation
@@ -67,26 +54,7 @@ real computeAdvection(real inputDO, real outputDO, real Q, real area, real dx) {
 	return (-1/area) * (outputMass - inputMass)/dx;
 }
 
-/**
-  * Compute gas transfer velocity for oxygen at a given temperature
-  * @param temp Water temperature (degrees C)
-  * @param k600 Gas transfer coefficient for Schmidt number of 600
-  * @references Wanninkhof R. (1992). Relationship between wind speed and gas exchange over the
-  *    ocean. Journal of Geophysical Research, 97, 7373.\n
-  *    Van de Bogert, M.C., Carpenter, S.R., Cole, J.J. & Pace, M.L. (2007). Assessing pelagic 
-  *    and benthic metabolism using free water measurements. Limnology and Oceanography: 
-  *    Methods, 5, 145–155.
-  * @return k at the given temperature
-*/
-real kT(real temp, real k600) {
-	real Sc;
-	// compute Schmidt number for oxygen
-	// parameters from Wanninkhof 1992. appendix
-	Sc = 1800.6 - 120.10 * temp + 3.7818 * temp^2 - 0.047608 * temp^3;
-	
-	// Van de Bogert et al eqn 5
-	return k600 * (Sc / 600)^-0.5;
-}
+
 
 /**
   * Compute GPP from light
