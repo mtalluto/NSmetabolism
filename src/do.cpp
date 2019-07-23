@@ -4,6 +4,7 @@
 
 #include <Rcpp.h>
 #include <cmath>
+#include "../inst/include/do.h"
 #include "../inst/include/funcs.h"
 
 double dDOdt (const Rcpp::NumericVector &params, const Rcpp::NumericVector &data, 
@@ -17,11 +18,27 @@ double osat(double temp, double P);
 double computeAdvection(double inputDOMass, double outputDO, double Q, double area, double dx);
 
 
-// idea - input checking is all over the place
-// only do input checking on r entry points
-// so need an r_api file that has r entry points to various functions
-// these do input checking and then call c++ functions
-// then I can have a check_params() and check_data() function that handles this
+
+double NSM::oxyMassFlux (const std::vector<double> &DO, const std::vector<double> &Q) {
+	double result = 0;
+	for(int i = 0; i < Q.size(); ++i)
+		result += oxyMassFlux(DO.at(i), Q.at(i));
+	return result;
+}
+
+double NSM::oxyMassFlux (double DO, double Q) {
+	// convert discharge into liters per minute
+	double lPerM3 = 1000;
+	double sPerMin = 60;
+	Q = Q * lPerM3 * sPerMin;
+	return Q * DO;
+}
+
+double NSM::advection(double inputFlux, double DOconc, double Q, double area, double dx) {
+	double outputFlux = NSM::oxyMassFlux(DOconc, Q);
+	return (-1/area) * (outputFlux - inputFlux)/dx;
+}
+
 
 /**
 	* Compute derivative of dissolved oxygen with respect to time
@@ -195,24 +212,4 @@ double osat(double temp, double P) {
 }
 
 
-/**
-	* Compute transport component
-	* @param inputDOMass dissolved oxygen mass of input water
-	* @param outputDO dissolved oxygen concentration of focal pixel
-	* @param Q discharge
-	* @param area cross sectional area
-	* @param dx length of pixel
-	* @return transported DO mass
-*/
-// [[Rcpp::export]]
-double computeAdvection(double inputDOMass, double outputDO, double Q, double area, double dx) {
-	if(inputDOMass < 0 || outputDO < 0)
-		throw std::range_error("inputDOMass and outputDO must be >= 0");
-	if(Q < 0)
-		throw std::range_error("Q must be >= 0");
-	if(area <= 0 || dx <= 0)
-		throw std::range_error("Area and dx must positive");
 
-	double outputDOMass = Q * outputDO;
-	return (-1/area) * (outputDOMass - inputDOMass)/dx;
-}

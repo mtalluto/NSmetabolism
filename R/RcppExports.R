@@ -42,3 +42,14 @@ idw_river <- function(vals, dist, nbQ, Q) {
     .Call(`_NSmetabolism_idw_river`, vals, dist, nbQ, Q)
 }
 
+#' Computes the input dissolved oxygen flux
+#' @param upQ Upstream discharge (m^3/s)
+#' @param upDO Upstream dissolved oxygen concentration (mg/L)
+#' @param latQ Lateral input discharge (m^3/s)
+#' @param latDO Lateral input DO concentration(mg/L)
+#' @return double; the input flux (mg/min) of dissolved oxygen
+#' 
+computeInputDOFlux <- function(upQ, upDO, latQ, latDO) {
+    .Call(`_NSmetabolism_computeInputDOFlux`, upQ, upDO, latQ, latDO)
+}
+

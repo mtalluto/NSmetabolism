@@ -102,6 +102,20 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// computeInputDOFlux
+double computeInputDOFlux(const Rcpp::NumericVector& upQ, const Rcpp::NumericVector& upDO, double latQ, double latDO);
+RcppExport SEXP _NSmetabolism_computeInputDOFlux(SEXP upQSEXP, SEXP upDOSEXP, SEXP latQSEXP, SEXP latDOSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type upQ(upQSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type upDO(upDOSEXP);
+    Rcpp::traits::input_parameter< double >::type latQ(latQSEXP);
+    Rcpp::traits::input_parameter< double >::type latDO(latDOSEXP);
+    rcpp_result_gen = Rcpp::wrap(computeInputDOFlux(upQ, upDO, latQ, latDO));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_NSmetabolism_dDOdt", (DL_FUNC) &_NSmetabolism_dDOdt, 7},
@@ -111,6 +125,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_NSmetabolism_computeRF", (DL_FUNC) &_NSmetabolism_computeRF, 4},
     {"_NSmetabolism_computeAdvection", (DL_FUNC) &_NSmetabolism_computeAdvection, 5},
     {"_NSmetabolism_idw_river", (DL_FUNC) &_NSmetabolism_idw_river, 4},
+    {"_NSmetabolism_computeInputDOFlux", (DL_FUNC) &_NSmetabolism_computeInputDOFlux, 4},
     {NULL, NULL, 0}
 };
 

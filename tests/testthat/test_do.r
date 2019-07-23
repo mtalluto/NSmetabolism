@@ -1,6 +1,33 @@
 context("DO functions")
 library("NSmetabolism")
 
+
+test_that("Computing input mass flux", {
+	upDO <- c(10, 8)
+	upQ <- c(15, 20)
+	latQ <- 5
+	latDO <- 0
+
+	# input checking
+	expect_error(computeInputDOFlux(-1 * upQ, upDO, latQ, latDO))
+	expect_error(computeInputDOFlux(upQ, -1 * upDO, latQ, latDO))
+	expect_error(computeInputDOFlux(upQ, upDO, -1 * latQ, latDO))
+	expect_error(computeInputDOFlux(upQ, upDO, latQ, -5))
+	expect_error(computeInputDOFlux(upQ, upDO[1], latQ, latDO))
+
+	# test with 0, 1, and two upstream neighbors
+	expect_error(computeInputDOFlux(upQ, upDO, latQ, latDO), regex=NA)
+	expect_error(computeInputDOFlux(upQ[1], upDO[1], latQ, latDO), regex=NA)
+	expect_error(computeInputDOFlux(numeric(0), numeric(0), latQ, latDO), regex=NA)
+
+	#higher discharge and DO concentration means higher flux
+	expect_lt(computeInputDOFlux(upQ[1], upDO[1], latQ, latDO), 
+		computeInputDOFlux(upQ[1]*2, upDO[1], latQ, latDO))
+	expect_lt(computeInputDOFlux(upQ[1], upDO[1], latQ, latDO), 
+		computeInputDOFlux(upQ[1], upDO[1]*2, latQ, latDO))
+
+})
+
 test_that("Rearation flux produces sensible values", {
 	T <- 20
 	p <- 1025
