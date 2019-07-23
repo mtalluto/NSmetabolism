@@ -1,32 +1,9 @@
 functions {
-	real kT(real temp, real k600);
-	real computeRF(real temp, real pressure, real DO, real k600);
-	real osat(real temp, real P);
 	real computeAdvection(real inputDO, real outputDO, real Q, real area, real dx);
-	real computeGPP(real PAR, real lP1, real lP2);
-	real computeER(real temp, real ER24_20);
 
 	#include "functions.stan"
 
 
-	/**
-	 * Compute pressure at an elevation from pressure at a different elevation
-	 *
-	 * @param P pressure in hPa
-	 * @param elev elevation (meters) where pressure was measured
-	 * @param newElev elevation (m) at which to compute pressure
-	 * @return pressure (hPa) at specified elevation
-	*/
-	real pressureCorrection (real P, real elev, real newElev) {
-		real a = 2.25577e-5;
-		real b = 5.25588;
-		real seaLevelP;
-		real PPa; // pressure in pascals
-
-		PPa = P * 100; // convert from hPa
-		seaLevelP = PPa / pow(1 - a * elev, b);
-		return((seaLevelP * pow(1 - a * newElev, b))/100);
-	}
 
 	/**
 	 * compute a weighted average
@@ -273,20 +250,18 @@ model {
 				// note that stan is somewhat inflexible
 				// for some sites to have 2 upstream pixels, ALL sites must have 2 upstream pixels
 				// this is handled by having a dummy upstream pixel with a weight of 0
-				inputDO = usWeight[pix,1] * DOpr[usNb[pix,1], ti-1] + 
-						usWeight[pix,2] * DOpr[usNb[pix,2], ti-1] + 
-				 		latWeight[pix] * latInputDO[pix];
-				adv = computeAdvection(inputDO, DOpr[pix, ti-1], Q[pix], area[pix], dx[pix]);
-				print(adv);
+//				inputDO = usWeight[pix,1] * DOpr[usNb[pix,1], ti-1] + 
+//						usWeight[pix,2] * DOpr[usNb[pix,2], ti-1] + 
+//				 		latWeight[pix] * latInputDO[pix];
+//				adv = computeAdvection(inputDO, DOpr[pix, ti-1], Q[pix], area[pix], dx[pix]);
+
 				// note that all of these components, including ER, are constant at the reach scale
 				// finer resolution may be necessary in the future
-				rf = computeRF(waterTemp, pixPressure, DOpr[pix, ti-1], k600[reach]);
-				print(rf);
-				gpp[pix, ti] = computeGPP(pixLight, lP1[reach], lP2[reach]);
-				print(gpp[pix, ti]);
-				er[pix, ti] = computeER(waterTemp, ER24_20[reach]);
-				print(er[pix, ti]);
-				ddodt = adv + (gpp[pix, ti] + er[pix, ti] + rf) / depth[pix];
+//				rf = computeRF(waterTemp, pixPressure, DOpr[pix, ti-1], k600[reach]);
+//				gpp[pix, ti] = computeGPP(pixLight, lP1[reach], lP2[reach]);
+//				er[pix, ti] = computeER(waterTemp, ER24_20[reach]);
+//				ddodt = adv + (gpp[pix, ti] + er[pix, ti] + rf) / depth[pix];
+
 				DOpr[pix, ti] = DOpr[pix, ti-1] + ddodt * dt;
 			}
 		}
