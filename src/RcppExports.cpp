@@ -5,6 +5,23 @@
 
 using namespace Rcpp;
 
+// dDOdt
+double dDOdt(const Rcpp::NumericVector& params, const Rcpp::NumericVector& data, double inputDOMass, double DOPrev, double light, double waterTemp, double pressure);
+RcppExport SEXP _NSmetabolism_dDOdt(SEXP paramsSEXP, SEXP dataSEXP, SEXP inputDOMassSEXP, SEXP DOPrevSEXP, SEXP lightSEXP, SEXP waterTempSEXP, SEXP pressureSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type params(paramsSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type data(dataSEXP);
+    Rcpp::traits::input_parameter< double >::type inputDOMass(inputDOMassSEXP);
+    Rcpp::traits::input_parameter< double >::type DOPrev(DOPrevSEXP);
+    Rcpp::traits::input_parameter< double >::type light(lightSEXP);
+    Rcpp::traits::input_parameter< double >::type waterTemp(waterTempSEXP);
+    Rcpp::traits::input_parameter< double >::type pressure(pressureSEXP);
+    rcpp_result_gen = Rcpp::wrap(dDOdt(params, data, inputDOMass, DOPrev, light, waterTemp, pressure));
+    return rcpp_result_gen;
+END_RCPP
+}
 // computeER
 double computeER(double temp, double ER24_20);
 RcppExport SEXP _NSmetabolism_computeER(SEXP tempSEXP, SEXP ER24_20SEXP) {
@@ -42,9 +59,9 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// compute_rf
-double compute_rf(double temp, double pressure, double DO, double k600);
-RcppExport SEXP _NSmetabolism_compute_rf(SEXP tempSEXP, SEXP pressureSEXP, SEXP DOSEXP, SEXP k600SEXP) {
+// computeRF
+double computeRF(double temp, double pressure, double DO, double k600);
+RcppExport SEXP _NSmetabolism_computeRF(SEXP tempSEXP, SEXP pressureSEXP, SEXP DOSEXP, SEXP k600SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -52,7 +69,22 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type pressure(pressureSEXP);
     Rcpp::traits::input_parameter< double >::type DO(DOSEXP);
     Rcpp::traits::input_parameter< double >::type k600(k600SEXP);
-    rcpp_result_gen = Rcpp::wrap(compute_rf(temp, pressure, DO, k600));
+    rcpp_result_gen = Rcpp::wrap(computeRF(temp, pressure, DO, k600));
+    return rcpp_result_gen;
+END_RCPP
+}
+// computeAdvection
+double computeAdvection(double inputDOMass, double outputDO, double Q, double area, double dx);
+RcppExport SEXP _NSmetabolism_computeAdvection(SEXP inputDOMassSEXP, SEXP outputDOSEXP, SEXP QSEXP, SEXP areaSEXP, SEXP dxSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< double >::type inputDOMass(inputDOMassSEXP);
+    Rcpp::traits::input_parameter< double >::type outputDO(outputDOSEXP);
+    Rcpp::traits::input_parameter< double >::type Q(QSEXP);
+    Rcpp::traits::input_parameter< double >::type area(areaSEXP);
+    Rcpp::traits::input_parameter< double >::type dx(dxSEXP);
+    rcpp_result_gen = Rcpp::wrap(computeAdvection(inputDOMass, outputDO, Q, area, dx));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -72,10 +104,12 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_NSmetabolism_dDOdt", (DL_FUNC) &_NSmetabolism_dDOdt, 7},
     {"_NSmetabolism_computeER", (DL_FUNC) &_NSmetabolism_computeER, 2},
     {"_NSmetabolism_computeGPP", (DL_FUNC) &_NSmetabolism_computeGPP, 3},
     {"_NSmetabolism_computeGPP_linear", (DL_FUNC) &_NSmetabolism_computeGPP_linear, 2},
-    {"_NSmetabolism_compute_rf", (DL_FUNC) &_NSmetabolism_compute_rf, 4},
+    {"_NSmetabolism_computeRF", (DL_FUNC) &_NSmetabolism_computeRF, 4},
+    {"_NSmetabolism_computeAdvection", (DL_FUNC) &_NSmetabolism_computeAdvection, 5},
     {"_NSmetabolism_idw_river", (DL_FUNC) &_NSmetabolism_idw_river, 4},
     {NULL, NULL, 0}
 };

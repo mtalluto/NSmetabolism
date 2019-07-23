@@ -6,17 +6,67 @@
 #include <cmath>
 #include "../inst/include/funcs.h"
 
+double dDOdt (const Rcpp::NumericVector &params, const Rcpp::NumericVector &data, 
+			double inputDOMass, double DOPrev, double light, double waterTemp, double pressure);
+double computeER(double temp, double ER24_20);
 double computeGPP(double PAR, double lP1, double lP2);
 double computeGPP_linear(double PAR, double lP1);
-double compute_rf(double temp, double pressure, double DO, double k600);
+double computeRF(double temp, double pressure, double DO, double k600);
 double kT(double temp, double k600);
 double osat(double temp, double P);
+double computeAdvection(double inputDOMass, double outputDO, double Q, double area, double dx);
+
+
+// idea - input checking is all over the place
+// only do input checking on r entry points
+// so need an r_api file that has r entry points to various functions
+// these do input checking and then call c++ functions
+// then I can have a check_params() and check_data() function that handles this
+
+/**
+	* Compute derivative of dissolved oxygen with respect to time
+	*
+	* @details Expected named parameters in the model are:
+		* `k600`: the gas exchange coefficient
+		* `lP1`: log of the slope of the PI curve
+		* `lP2`: log of the saturation term of the PI curve
+		* `ER24`: ER for a 24 h period at 20 degrees
+
+	Site specific data necessary for dDOdt are:
+		* `Q`: discharge (m^3 / sec)
+		* `area`: Cross-sectional area (m^2)
+		* `dx` length of stream segment (meters)
+		* `z` stream depth (meters)
+
+	* @param params Named vector of model parameters
+	* @param data Named vector of site- (i.e., pixel-) specific data
+	* @param inputDOMass DO mass from upstream and lateral sources (mg)
+	* @param DOPrev DO concentration at previuos time step (mg/L)
+	* @param light Light irradiance (W/m^2)
+	* @param waterTemp Water temperature (degrees C)
+	* @param pressure Atmospheric pressure (hPa)
+	* @return double; derivative of dissolved oxygen with respect to time
+*/
+// [[Rcpp::export]]
+double dDOdt (const Rcpp::NumericVector &params, const Rcpp::NumericVector &data, 
+			double inputDOMass, double DOPrev, double light, double waterTemp, double pressure) {
+	if(data['z'] <= 0)
+		throw std::range_error("Depth (z) must be positive");
+
+	double advection = computeAdvection(inputDOMass, DOPrev, data["Q"], data["area"], data["dx"]);
+	double gpp = computeGPP(light, params["lP1"], params["lP2"]);
+	double er = computeER(waterTemp, params["ER24"]);
+	double rf = computeRF(waterTemp, pressure, DOPrev, params["k600"]);
+
+	double ddodt = advection + (gpp + er + rf) / data["z"];
+	return ddodt;
+}
 
 
 /**
-  * Compute ecosystem respiration at a given temperature
-  * @param temp Water temperature (degrees C)
-  * @param ER24_20 Ecosystem respiration rate for a 24-hour period at 20 degrees
+	* Compute ecosystem respiration at a given temperature
+	* @param temp Water temperature (degrees C)
+	* @param ER24_20 Ecosystem respiration rate for a 24-hour period at 20 degrees
 */
 // [[Rcpp::export]]
 double computeER(double temp, double ER24_20) {
@@ -26,14 +76,16 @@ double computeER(double temp, double ER24_20) {
 }
 
 /**
-  * Compute GPP from light
-  * @param PAR Photosynthetically active radiation, in W/m^2 
-  * @param lP1 The log of the slope of the PI curve
-  * @param lP2 The log of the saturation term of the PI curve
+	* Compute GPP from light
+	* @param PAR Photosynthetically active radiation, in W/m^2 
+	* @param lP1 The log of the slope of the PI curve
+	* @param lP2 The log of the saturation term of the PI curve
 */
 // [[Rcpp::export]]
 double computeGPP(double PAR, double lP1, double lP2) {
-	if(PAR <= 0)
+	if(PAR < 0)
+		throw std::range_error("Light must be >= 0");
+	if(PAR == 0)
 		return 0;
 
 	// Uehlinger et al 2000 eq 3b
@@ -45,10 +97,10 @@ double computeGPP(double PAR, double lP1, double lP2) {
 
 
 /**
-  * Compute GPP from light
-  * @param PAR Photosynthetically active radiation, in W/m^2 
-  * @param lP1 The log of the slope of the PI curve
-  * @param lP2 The log of the saturation term of the PI curve
+	* Compute GPP from light
+	* @param PAR Photosynthetically active radiation, in W/m^2 
+	* @param lP1 The log of the slope of the PI curve
+	* @param lP2 The log of the saturation term of the PI curve
 */
 // [[Rcpp::export]]
 double computeGPP_linear(double PAR, double lP1) {
@@ -63,17 +115,17 @@ double computeGPP_linear(double PAR, double lP1) {
 
 
 /**
-  * Computes reaeration flux
-  *
-  * @param temp Water temperature (degrees C)
-  * @param pressure Atmospheric pressure (hPa)
-  * @param DO dissolved oxygen concentration, mg/L
-  * @param k600 Gas transfer coefficient for Schmidt number of 600
-  * @return computed rearation flux
-  * @export
+	* Computes reaeration flux
+	*
+	* @param temp Water temperature (degrees C)
+	* @param pressure Atmospheric pressure (hPa)
+	* @param DO dissolved oxygen concentration, mg/L
+	* @param k600 Gas transfer coefficient for Schmidt number of 600
+	* @return computed rearation flux
+	* @export
 */
 // [[Rcpp::export]]
-double compute_rf(double temp, double pressure, double DO, double k600) {
+double computeRF(double temp, double pressure, double DO, double k600) {
 	if(DO < 0)
 		throw std::range_error("DO concentration must be positive");
 
@@ -81,15 +133,15 @@ double compute_rf(double temp, double pressure, double DO, double k600) {
 }
 
 /**
-  * Compute gas transfer velocity for oxygen at a given temperature
-  * @param temp Water temperature (degrees C)
-  * @param k600 Gas transfer coefficient for Schmidt number of 600
-  * @references Wanninkhof R. (1992). Relationship between wind speed and gas exchange over the
-  *    ocean. Journal of Geophysical Research, 97, 7373.\n
-  *    Van de Bogert, M.C., Carpenter, S.R., Cole, J.J. & Pace, M.L. (2007). Assessing pelagic 
-  *    and benthic metabolism using free water measurements. Limnology and Oceanography: 
-  *    Methods, 5, 145–155.
-  * @return k at the given temperature
+	* Compute gas transfer velocity for oxygen at a given temperature
+	* @param temp Water temperature (degrees C)
+	* @param k600 Gas transfer coefficient for Schmidt number of 600
+	* @references Wanninkhof R. (1992). Relationship between wind speed and gas exchange over the
+	*    ocean. Journal of Geophysical Research, 97, 7373.\n
+	*    Van de Bogert, M.C., Carpenter, S.R., Cole, J.J. & Pace, M.L. (2007). Assessing pelagic 
+	*    and benthic metabolism using free water measurements. Limnology and Oceanography: 
+	*    Methods, 5, 145–155.
+	* @return k at the given temperature
 */
 double kT(double temp, double k600) {
 	if(k600 < 0)
@@ -105,13 +157,13 @@ double kT(double temp, double k600) {
 
 
 /**
-  * Compute oxygen saturation
-  * @param temp Water temperature (degrees C)
-  * @param P atmospheric pressure, in hPa
-  * references Benson BB and Krause D. 1984. The concentration and isotopic fractionation of
-  *     oxygen dissolved in freshwater and seawater in equilibrium with the atmosphere. 
-  *     Limnol. Oceanogr., 29, 620–632.
-  * @return oxygen saturation concentration at given temperature and pressure
+	* Compute dissolved oxygen saturation given temperature and pressure
+	* @param temp Water temperature (degrees C)
+	* @param P atmospheric pressure, in hPa
+	* references Benson BB and Krause D. 1984. The concentration and isotopic fractionation of
+	*     oxygen dissolved in freshwater and seawater in equilibrium with the atmosphere. 
+	*     Limnol. Oceanogr., 29, 620–632.
+	* @return oxygen saturation concentration at given temperature and pressure
 */
 double osat(double temp, double P) {  
 	if(P < 0)
@@ -140,4 +192,27 @@ double osat(double temp, double P) {
 
 	// eqn 28
 	return Cstaro * ((Patm - Pwv) * (1 - theta * Patm)) / ((1 - Pwv) * (1 - theta));
+}
+
+
+/**
+	* Compute transport component
+	* @param inputDOMass dissolved oxygen mass of input water
+	* @param outputDO dissolved oxygen concentration of focal pixel
+	* @param Q discharge
+	* @param area cross sectional area
+	* @param dx length of pixel
+	* @return transported DO mass
+*/
+// [[Rcpp::export]]
+double computeAdvection(double inputDOMass, double outputDO, double Q, double area, double dx) {
+	if(inputDOMass < 0 || outputDO < 0)
+		throw std::range_error("inputDOMass and outputDO must be >= 0");
+	if(Q < 0)
+		throw std::range_error("Q must be >= 0");
+	if(area <= 0 || dx <= 0)
+		throw std::range_error("Area and dx must positive");
+
+	double outputDOMass = Q * outputDO;
+	return (-1/area) * (outputDOMass - inputDOMass)/dx;
 }
