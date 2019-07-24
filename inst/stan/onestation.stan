@@ -48,7 +48,7 @@ transformed parameters {
 		rf = computeRF(temp[i-1], pressure, DO_pr[i-1], k600);
 		gpp[i] = computeGPP(PAR[i-1], lP1, lP2);
 		er[i] = computeER(temp[i-1], ER24_20);
-		ddodt = (gpp[i] + er[i] + rf) / z;
+		ddodt = ((gpp[i] + er[i] + rf) / z) / (24*60);
 		DO_pr[i] = DO_pr[i-1] + ddodt * dt;
 	}
 }

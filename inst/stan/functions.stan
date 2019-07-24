@@ -13,55 +13,56 @@ real computeRF(real temp, real pressure, real DO, real k600) {
 
 
 /**
-  * Compute oxygen saturation
-  * @param temp Water temperature (degrees C)
-  * @param P atmospheric pressure, in hPa
-  * references Benson BB and Krause D. 1984. The concentration and isotopic fractionation of
-  *     oxygen dissolved in freshwater and seawater in equilibrium with the atmosphere. 
-  *     Limnol. Oceanogr., 29, 620–632.
-  * @return oxygen saturation concentration at given temperature and pressure
+    * Compute dissolved oxygen saturation given temperature and pressure (mg/L OR g/m^3)
+    * @param temp Water temperature (degrees C)
+    * @param P atmospheric pressure, in hPa
+    * @references Benson BB and Krause D. 1984. The concentration and isotopic fractionation of
+    *     oxygen dissolved in freshwater and seawater in equilibrium with the atmosphere. 
+    *     Limnol. Oceanogr., 29, 620–632.
+    *     
+    * Benson BB and Krause D. 1980. The concentration and isotopic fractionation of gases
+    *           dissolved in freshwater in equilibrium with the atmosphere. 1. Oxygen.  Limnol. 
+    *           Oceanogr., 25(4):662-671
+    * @return oxygen saturation concentration at given temperature and pressure
 */
 real osat(real temp, real P) {  
-	real tempK;
-	real Patm;
 	real Cstaro;
 	real theta;
 	real Pwv;
+    real tempK = temp + 273.15;
 	real hPaPerAtm = 1013.2500;
+    real Patm = P / hPaPerAtm;
 
-	tempK = temp + 273.15;
-	Patm = P / hPaPerAtm;
+    // C*o, the unit standard atmospheric concentration by volume for oxygen; in mg/L
+    // eqn 32 from Benson and Krause 1984.
+	Cstaro = exp(-139.34411 + (1.575701e5 / tempK) - (6.642308e7 / tempK^2) + 
+		  (1.243800e10 / tempK^3) - (8.621949e11 / tempK^4));
 
-	// C*o, the unit standard atmospheric concentration by volume for oxygen; in mg/kg
-	// eqn 31 from Benson and Krause 1984.
-	Cstaro = exp(-1.3874202e2 + (1.572288e5 / tempK) - (6.637149e7 / tempK^2) + 
-		  (1.243678e10 / tempK^3) - (8.621061e11 / tempK^4));
-
-	// eqn 13, 
-	// the negative of the second pressure coefficient in the virial expansion for  gas 
-	// the real behavior of oxygen.
+    // Benson and Krause 1980 eqn 13, 
+    // the negative of the second pressure coefficient in the virial expansion for 
+    // the real behavior of oxygen.
 	theta = 0.000975 - 1.426e-5 * temp + 6.436e-8 * temp^2;
 
-	// eqn 23
-	// the saturated vapor pressure of water in atmospheres at the temperature of equilibrium.
-	// in atmospheres
+    // Benson and Krause 1980 eqn 23
+    // the saturated vapor pressure of water in atmospheres at the temperature of equilibrium.
+    // in atmospheres
 	Pwv = exp(11.8571 - (3840.7 / tempK) - (216961 / tempK^2));
 
-	// eqn 28
+    // Benson and Krause 1980 eqn 28
 	return Cstaro * ((Patm - Pwv) * (1 - theta * Patm)) / ((1 - Pwv) * (1 - theta));
 }
 
 
 /**
-  * Compute gas transfer velocity for oxygen at a given temperature
+  * Compute gas transfer velocity for oxygen at a given temperature (m/day)
   * @param temp Water temperature (degrees C)
-  * @param k600 Gas transfer coefficient for Schmidt number of 600
+  * @param k600 Gas transfer coefficient for Schmidt number of 600 (m/day)
   * @references Wanninkhof R. (1992). Relationship between wind speed and gas exchange over the
   *    ocean. Journal of Geophysical Research, 97, 7373.\n
   *    Van de Bogert, M.C., Carpenter, S.R., Cole, J.J. & Pace, M.L. (2007). Assessing pelagic 
   *    and benthic metabolism using free water measurements. Limnology and Oceanography: 
   *    Methods, 5, 145–155.
-  * @return k at the given temperature
+  * @return k at the given temperature (m/day)
 */
 real kT(real temp, real k600) {
 	real Sc;
@@ -75,7 +76,14 @@ real kT(real temp, real k600) {
 
 
 /**
-  * Compute GPP from light
+  * Compute gross primary productivity from light (g O2 / [m^2 * day])
+  * @details P1 is in units of (W*day)/gO2, P2 is in (m^2 * day) / gO2
+  * @param lP1 The log of the slope of the PI curve
+  * @param lP2 The log of the saturation term of the PI curve
+  * @param data Fixed site data, including at least Q, area, and dx
+  * @references Uehlinger U. et al. 2000. Variability of photosynthesis-irradiance curves and
+  *         ecosystem respiration in a small river. Freshwater Biology 44:493-507.
+  * @return double; computed GPP 
   * @param PAR Photosynthetically active radiation, in W/m^2 
   * @param lP1 The log of the slope of the PI curve
   * @param lP2 The log of the saturation term of the PI curve
@@ -94,17 +102,18 @@ real computeGPP(real PAR, real lP1, real lP2) {
 
 
 /**
-  * Compute ecosystem respiration at a given temperature
-  * @param temp Water temperature (degrees C)
-  * @param ER24_20 Ecosystem respiration rate for a 24-hour period at 20 degrees
+    * Compute ecosystem respiration at in-situ temperature (gO2 / [m^2 * day])
+    * @param temp Water temperature (degrees C)
+    * @param ER24_20 Ecosystem respiration rate at 20 degrees (gO2 / [m^2 * day])
+    * @return adjusted ER
 */
 real computeER(real temp, real ER24_20) {
-	return (ER24_20 / (60*24)) * (1.045^(temp - 20));
+	return ER24_20 * (1.045^(temp - 20));
 }
 
 
 /**
-	* Compute expected value of k given slope and velocity, in m/s
+	* Compute expected value of k given slope and velocity, in m/day
 	* @param slope Slope of the stream
 	* @param velocity Velocity of the stream, m/s
 	* @return real; expected value of k
@@ -113,12 +122,12 @@ real k_mu(real slope, real velocity) {
 	real kmu;
 	
 	kmu = 1162 * pow(slope, 0.77) * pow(velocity, 0.85); // in meters/day
-	kmu = kmu / (24*60); // convert to m/s 
+	//kmu = kmu / (24*60); // convert to m/s 
 	return kmu;
 }
 
 /**
-	* Compute standard deviation of k given slope and velocity, in m/s
+	* Compute standard deviation of k given slope and velocity, in m/day
 	* @param slope Slope of the stream
 	* @param velocity Velocity of the stream, m/s
 	* @return real; expected standard deviation of k
@@ -131,6 +140,6 @@ real k_sd(real slope, real velocity) {
 	real b_sv = 270.8763474;
 	
 	ksd = a + b_s * slope + b_v * velocity + b_sv * slope * velocity;
-	ksd = ksd / (24*60); // convert to m/s 
+	//ksd = ksd / (24*60); // convert to m/s 
 	return ksd;
 }

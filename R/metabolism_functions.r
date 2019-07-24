@@ -1,17 +1,4 @@
-#' Compute Gross Primary Productivity
-#' @param par light intensity ($W/m^2$)
-#' @param P1 $(W min g^{-1} O_2)$ inverse of the slope of a photosynthesis–irradiance curve at low
-#' 		 light intensity
-#' @param P2 $(m^2 min g^{-1} O_2)$ inverse maximum photosynthesis rate; can be zero to assume
-#' 		  GPP is linear with light intensity instead of saturating
-#' @references Uehlinger, U., et al. 2000. Variability of photosynthesis‐irradiance curves and 
-#' 		 ecosystem respiration in a small river. *Freshw Biol* **44**:493–507.
-#' @return Photosynthetic rate
-#' @export
-gpp <- function(par, P1, P2) {
-	# Uehlinger et al 2000 eq 3b
-	par / (P1 + P2 * par)
-}
+
 
 
 

@@ -1,3 +1,19 @@
+#' Compute Gross Primary Productivity
+#' @param par light intensity ($W/m^2$)
+#' @param P1 $(W min g^{-1} O_2)$ inverse of the slope of a photosynthesis–irradiance curve at low
+#' 		 light intensity
+#' @param P2 $(m^2 min g^{-1} O_2)$ inverse maximum photosynthesis rate; can be zero to assume
+#' 		  GPP is linear with light intensity instead of saturating
+#' @references Uehlinger, U., et al. 2000. Variability of photosynthesis‐irradiance curves and 
+#' 		 ecosystem respiration in a small river. *Freshw Biol* **44**:493–507.
+#' @return Photosynthetic rate
+#' @export
+gpp <- function(par, P1, P2) {
+	stop("Function is deprecated, use computeGPP instead")
+	# Uehlinger et al 2000 eq 3b
+	par / (P1 + P2 * par)
+}
+
 #' Compute dissolved oxygen saturation given temperature and pressure
 #' @param temp Water temperature, in degrees C
 #' @param P pressure, in atmospheres
@@ -10,7 +26,7 @@
 #' @return vector of DO saturation values
 #' @keywords internal
 osat_r <- function(temp, P) {	
-	stop("Function is deprecated, use cpp version osat instead")
+	stop("Function is deprecated, use osat instead")
 	tempK <- temp + 273.15
 
 	# C*o, the unit standard atmospheric concentration by volume for oxygen; in mg/kg
@@ -46,7 +62,7 @@ osat_r <- function(temp, P) {
 #' @return vector of kT values
 #' @keywords internal
 kT_r <- function(temp, k600) {
-	stop("Function is deprecated, use cpp version kT instead")
+	warning("Function is deprecated, use kT() instead")
 
 	# compute Schmidt number for oxygen
 	# parameters from Wanninkhof 1992. appendix
