@@ -5,6 +5,19 @@
 
 using namespace Rcpp;
 
+// pressureCorrection
+double pressureCorrection(double P, double elev, double newElev);
+RcppExport SEXP _NSmetabolism_pressureCorrection(SEXP PSEXP, SEXP elevSEXP, SEXP newElevSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< double >::type P(PSEXP);
+    Rcpp::traits::input_parameter< double >::type elev(elevSEXP);
+    Rcpp::traits::input_parameter< double >::type newElev(newElevSEXP);
+    rcpp_result_gen = Rcpp::wrap(pressureCorrection(P, elev, newElev));
+    return rcpp_result_gen;
+END_RCPP
+}
 // idw_river
 NumericVector idw_river(List vals, List dist, List nbQ, NumericVector Q);
 RcppExport SEXP _NSmetabolism_idw_river(SEXP valsSEXP, SEXP distSEXP, SEXP nbQSEXP, SEXP QSEXP) {
@@ -111,6 +124,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_NSmetabolism_pressureCorrection", (DL_FUNC) &_NSmetabolism_pressureCorrection, 3},
     {"_NSmetabolism_idw_river", (DL_FUNC) &_NSmetabolism_idw_river, 4},
     {"_NSmetabolism_computeInputDOFlux", (DL_FUNC) &_NSmetabolism_computeInputDOFlux, 4},
     {"_NSmetabolism_computeAdvection", (DL_FUNC) &_NSmetabolism_computeAdvection, 3},

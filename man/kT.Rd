@@ -19,7 +19,8 @@ Compute gas transfer velocity for oxygen at a given temperature (m/day)
 }
 \references{
 Wanninkhof R. (1992). Relationship between wind speed and gas exchange over the
-ocean. Journal of Geophysical Research, 97, 7373.\n
+ocean. Journal of Geophysical Research, 97, 7373.
+
 Van de Bogert, M.C., Carpenter, S.R., Cole, J.J. & Pace, M.L. (2007). Assessing pelagic
 and benthic metabolism using free water measurements. Limnology and Oceanography:
 Methods, 5, 145–155.

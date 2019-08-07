@@ -18,12 +18,12 @@ data {
 
 	int<lower = max(time)> maxTime; // latest time at which we want predictions
 	vector [maxTime] temp;
-	vector [maxTime] PAR;
+	vector [maxTime] light;
+	vector <lower = 0> [maxTime] pressure;
 
 	// stream characteristics; should be average of two sites for scalars
 	real <lower = 0> slope;
 	real <lower = 0> velocity;
-	real <lower = 0> pressure;
 	real <lower = 0> z; // depth
 	real <lower = 0> dt; // length (in minutes) of a single time step
 }
@@ -45,8 +45,8 @@ transformed parameters {
 	for(i in 2:maxTime) {
 		real ddodt;
 		real rf;
-		rf = computeRF(temp[i-1], pressure, DO_pr[i-1], k600);
-		gpp[i] = computeGPP(PAR[i-1], lP1, lP2);
+		rf = computeRF(temp[i-1], pressure[i-1], DO_pr[i-1], k600);
+		gpp[i] = computeGPP(light[i-1], lP1, lP2);
 		er[i] = computeER(temp[i-1], ER24_20);
 		ddodt = ((gpp[i] + er[i] + rf) / z) / (24*60);
 		DO_pr[i] = DO_pr[i-1] + ddodt * dt;

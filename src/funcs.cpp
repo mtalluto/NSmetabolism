@@ -9,7 +9,8 @@ long double log_sum_exp(long double v1, long double v2) {
 	return 	mv + std::log(std::exp(v1 - mv) + std::exp(v2 - mv));
 }
 
-
+//' @export
+// [[Rcpp::export]]
 double pressureCorrection (double P, double elev, double newElev) {
 	double a = 2.25577e-5;
 	double b = 5.25588;
