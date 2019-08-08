@@ -14,7 +14,7 @@ data {
 
 	vector<lower=0> [nDO] DO; // DO Observations
 	int<lower = 1> time [nDO]; // time of each DO observation, in minutes
-	real<lower = 0> DO_initial; // estimate of DO concentration at time = 1
+	real<lower = 0> DOinitial; // estimate of DO concentration at time = 1
 
 	int<lower = max(time)> maxTime; // latest time at which we want predictions
 	vector [maxTime] temp;
@@ -26,6 +26,12 @@ data {
 	real <lower = 0> velocity;
 	real <lower = 0> z; // depth
 	real <lower = 0> dt; // length (in minutes) of a single time step
+
+	// parameters for the prior
+	real lp1mu;
+	real lp1sd;
+	real lp2mu;
+	real lp2sd;
 }
 
 parameters {
@@ -57,10 +63,10 @@ model {
 		DO[i] ~ normal(DO_pr[time[i]], sigma);
 	}
 	k600 ~ normal(k_mu(slope, velocity), k_sd(slope, velocity));
-	lP1 ~ normal(9, 3); // considering the log scale, these are VERY weakly informative
-	lP2 ~ normal(9, 3); // considering the log scale, these are VERY weakly informative
+	lP1 ~ normal(lp1mu, lp1sd);
+	lP2 ~ normal(lp2mu, lp2sd);
 	ER24_20 ~ normal(0, 10);
 	sigma ~ normal(0, 10);
-	DO_i ~ normal(DO_initial, sigma);
+	DO_i ~ normal(DOinitial, sigma);
 }
 

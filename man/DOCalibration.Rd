@@ -19,7 +19,7 @@ DOCalibration(initial, data, model = c("onestation", "twostation",
 
 \item{nsamples}{The number of posterior samples to return}
 
-\item{prior}{Priors for the function chosen}
+\item{prior}{Priors for the function chosenl, see 'details'}
 
 \item{...}{Additional arguments to pass to the sampler}
 }
@@ -36,6 +36,15 @@ The \code{model} parameter selects which model will be used; one of:
 \code{\link[=oneStation_DOlogprob]{oneStation_DOlogprob()}}
 \item twostation: Not implemented
 \item nstation: Not implemented
+}
+
+For a prior, you may specify a named list, with each item a vector of parameters to use for
+the prior. Currently, the following parameters are supported:
+\itemize{
+\item lp1: the log of the inverse of the slope of the photosynthesis-irradiance curve; default
+\code{c(0, 10)}.
+\item lp2: the log of the saturation term of the photosynthesis-irradiance curve; default
+\code{c(0, 10)}.
 }
 }
 \references{

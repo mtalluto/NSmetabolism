@@ -4,7 +4,7 @@
 \alias{calibStan}
 \title{keywords @internal}
 \usage{
-calibStan(data, nsamples, model, dt, ...)
+calibStan(data, nsamples, model, dt, prior, ...)
 }
 \description{
 keywords @internal
