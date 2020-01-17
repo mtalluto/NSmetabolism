@@ -28,18 +28,7 @@ double oxyMassFlux(double DO, double Q);
 double advection(double inputFlux, double DOconc, double Q, double area, double dx);
 
 
-/**
-	* Compute gross primary productivity from light (g O2 / [m^2 * day])
- 	* @details P1 is in units of (W*day)/gO2, P2 is in (m^2 * day) / gO2
-	* @param PAR Photosynthetically active radiation, in W/m^2 
-	* @param lP1 The log of the slope of the PI curve
-	* @param lP2 The log of the saturation term of the PI curve
- 	* @references Uehlinger U. et al. 2000. Variability of photosynthesis-irradiance curves and
- 	*  		ecosystem respiration in a small river. Freshwater Biology 44:493-507.
- 	* @return double; computed GPP  
-*/
-double gpp(double PAR, double lP1, double lP2);
-double gpp(double PAR, double lP1);
+
 
 
 /**

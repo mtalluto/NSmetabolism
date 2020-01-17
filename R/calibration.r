@@ -45,40 +45,6 @@ DOCalibration <- function(initial, data, model = c('onestation', 'twostation', '
 }
 
 
-#' @keywords internal
-calibLaplace <- function(initial, data, model, nsamples, prior) {
-	if(!requireNamespace("mvtnorm"))
-		stop("Method 'laplace' requires the mvtnorm package; please install it and try again")
-
-	if(model == 'onestation') {
-		logProb <- oneStation_DOlogprob
-		parTransform <- oneStation_parTransform 
-		simFct <- oneStation_DOSim
-	} else {
-		stop("Model ", model, " is not implemented yet")
-	}
-
-	fit <- optim(initial, logProb, control = list(fnscale = -1), hessian = TRUE, data = data, 
-		prior = prior)
-	vcvMat <- solve(-fit$hessian)
-	
-	# check for positive semidefiniteness; if not, find the nearest positiveSD matrix
-	eigenvalues <- eigen(vcvMat, only.values = TRUE)$values
-	eigenvalues[abs(eigenvalues) < 1e-8] <- 0 
-	if(any(eigenvalues <= 0)) {
-		if(requireNamespace("Matrix", quietly=TRUE)) {
-			vcvMat <- as.matrix(Matrix::nearPD(vcvMat)$mat)
-		} else {
-			warning("The parameter variance-covariance matrix is not positive semidefinite. The samples may not reflect the posterior distribution and should be considered approximate. Please install the 'Matrix' package for a better estimate.")
-		}
-	}
-
-	samples <- mvtnorm::rmvnorm(nsamples, fit$par, vcvMat)
-	samples <- parTransform(samples)
-	sims <- simFct(samples, data)
-
-	list(params = samples, DO = sims$DO, GPP = sims$GPP, time = sims$times, fit = fit)
-}
 
 #' keywords @internal
 calibStan <- function(data, nsamples, model, dt, prior, ...) {
@@ -94,29 +60,6 @@ calibStan <- function(data, nsamples, model, dt, prior, ...) {
 			stanDat$lp1sd <- prior$lp1[2]
 			stanDat$lp2mu <- prior$lp2[1]
 			stanDat$lp2sd <- prior$lp2[2]
-		# } else {
-		# 	stanDat <- list(
-		# 		nDO = nrow(data$DO),
-		# 		timesDO = data$DO$minutes,
-		# 		dt = dt,
-		# 		z = data$z,
-		# 		pressure = data$P,
-		# 		DO = data$DO$DO,
-		# 		slope = data$slope,
-		# 		velocity = data$velocity
-		# 	)		
-		# 	parFun <- approxfun(x = data$PAR[,2], y = data$PAR[,1], rule = 2)
-		# 	tempFun = approxfun(x = data$temp[,2], y = data$temp[,1], rule = 2)
-
-		# 	stanDat$timesInt <- seq(stanDat$timesDO[1], stanDat$timesDO[length(stanDat$timesDO)], dt)
-		# 	stanDat$nTime <- length(stanDat$timesInt)
-		# 	stanDat$PAR <- parFun(stanDat$timesInt)
-		# 	stanDat$temp <- tempFun(stanDat$timesInt)
-		# 	if(any(stanDat$timesDO != as.integer(stanDat$timesDO)) | dt != as.integer(dt))
-		# 		stop("Non-integer times are not supported; please ensure that dt and all times are integers")
-
-		# 	if(!all(stanDat$timesDO %in% stanDat$timesInt))
-		# 		stop("Please choose dt such that seq(times[1], times[length(times)], dt) includes all entries in times")
 	} else if(model == 'twostation') {
 		file <- system.file("stan/twostation.stan", package="NSmetabolism")
 		stanDat <- data

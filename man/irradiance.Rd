@@ -14,11 +14,14 @@ irradiance(dem, output_points, times, timezone, use_existing = FALSE,
 \item{dem}{A \link[sp:SpatialGridDataFrame]{sp::SpatialGridDataFrame} or \link[raster:RasterLayer]{raster::RasterLayer} object giving the digital
 elevation model of the study area.}
 
-\item{output_points}{A set out output points; either a \link[sp:SpatialPoints]{sp::SpatialPoints} object or a raster mask.}
+\item{output_points}{A set out output points; either a \link[sp:SpatialPoints]{sp::SpatialPoints} object or a
+raster mask.}
 
-\item{times}{A vector of \link{POSIXct} objects giving the dates and times at which to compute irradiance. These should be given in local (to the DEM) time}
+\item{times}{A vector of \link{POSIXct} objects giving the dates and times at which to compute
+irradiance. These should be given in local (to the DEM) time}
 
-\item{timezone}{An integer giving the offset in hours from UTC that applies to the DEM; see the manual for r.sun for details}
+\item{timezone}{An integer giving the offset in hours from UTC that applies to the DEM; see
+the manual for r.sun for details}
 
 \item{use_existing}{logical, if TRUE then existing slope, aspect, longitute, and horizon
 rasters will be used, if FALSE then they will be recomputed}

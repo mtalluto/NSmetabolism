@@ -2,9 +2,12 @@
 #'
 #' @param dem A [sp::SpatialGridDataFrame] or [raster::RasterLayer] object giving the digital
 #' 		elevation model of the study area.
-#' @param output_points A set out output points; either a [sp::SpatialPoints] object or a raster mask.
-#' @param times A vector of [POSIXct] objects giving the dates and times at which to compute irradiance. These should be given in local (to the DEM) time
-#' @param timezone An integer giving the offset in hours from UTC that applies to the DEM; see the manual for r.sun for details
+#' @param output_points A set out output points; either a [sp::SpatialPoints] object or a 
+#' raster mask.
+#' @param times A vector of [POSIXct] objects giving the dates and times at which to compute
+#'  irradiance. These should be given in local (to the DEM) time
+#' @param timezone An integer giving the offset in hours from UTC that applies to the DEM; see 
+#' the manual for r.sun for details
 #' @param use_existing logical, if TRUE then existing slope, aspect, longitute, and horizon
 #' rasters will be used, if FALSE then they will be recomputed
 #' @param dem_name character; this parameter (and similar name parameters) tell GRASS what names to

@@ -2,9 +2,6 @@
 	functions needed to compute dissolved oxygen concentration
 */
 
-#include <Rcpp.h>
-#include <cmath>
-#include "../inst/include/do.h"
 #include "../inst/include/funcs.h"
 
 // double dDOdt (const Rcpp::NumericVector &params, const Rcpp::NumericVector &data, 
@@ -42,25 +39,7 @@ double NSM::advection(double inputFlux, double DOconc, double Q, double area, do
 
 
 
-double NSM::gpp(double PAR, double lP1, double lP2) {
-	if(PAR == 0)
-		return 0;
 
-	// Uehlinger et al 2000 eq 3b
-	// GPP = PAR/(P1 + P2 * PAR)
-	double lpar = std::log(PAR);
-	double lGPP = lpar - log_sum_exp(lP1, lP2 + lpar);
-	return std::exp(lGPP);
-}
-
-
-double NSM::gpp(double PAR, double lP1) {
-	if(PAR == 0)
-		return 0;
-
-	double lGPP = std::log(PAR) - lP1;
-	return std::exp(lGPP);
-}
 
 
 double NSM::er(double temp, double ER24_20) {
