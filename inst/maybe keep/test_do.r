@@ -43,41 +43,7 @@ test_that("Advection", {
 
 })
 
-test_that("Rearation flux produces sensible values", {
-	T <- 20
-	p <- 1025
-	do <- 9
-	k <- 2/(24*60)
 
-	# input checking
-	expect_error(kT(T, -5))
-	expect_error(kT(T, c(k, 2*k)))
-	expect_error(osat(c(T, T*2), p))
-
-	# reference value for kT
-	expect_equal(kT(T, k), 0.001477129, tol=1e-5)
-
-	# reference value for Osat
-	CstarO <- 10.084
-	T <- 15
-	P <- 1013.2500
-	Patm <- 1
-	ref <- CstarO * Patm
-	expect_equal(osat(T, P), ref, tol=1e-3)
-
-	## basic input checking
-	expect_error(computeRF(c(T, T*2), p, do, k))
-	expect_error(computeRF(T, p, do, c(k, 2*k)))
-	expect_error(computeRF(T, p, -5, k))
-	expect_error(computeRF(T, p, do, -2))
-	expect_error(computeRF(T, -1, do, k))
-
-	## DO below saturation
-	expect_gt(computeRF(T, p, do, k), 0)
-
-	## DO above saturation
-	expect_lt(computeRF(T, p, 20, k), 0)
-})
 
 
 

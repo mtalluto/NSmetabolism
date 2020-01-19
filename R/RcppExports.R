@@ -15,3 +15,66 @@ computeGPP <- function(light, lP1, lP2) {
     .Call(`_NSmetabolism_computeGPP`, light, lP1, lP2)
 }
 
+#' Compute ecosystem respiration at in-situ temperature (gO2 / [m^2 * day])
+#' @param temperature Water temperature (degrees C)
+#' @param ER24_20 Ecosystem respiration rate at 20 degrees (gO2 / [m^2 * day])
+#' @return Temperature-adjusted ER
+#' 
+inSituER <- function(temperature, ER24_20) {
+    .Call(`_NSmetabolism_inSituER`, temperature, ER24_20)
+}
+
+#' Computes reaeration flux (g/(m^2 * day))
+#' 
+#' @param temp Water temperature (degrees C)
+#' @param pressure Atmospheric pressure (hPa)
+#' @param DO dissolved oxygen concentration, mg/L
+#' @param k600 Gas transfer coefficient for Schmidt number of 600
+#' @return computed rearation flux
+#' @export
+computeRF <- function(temp, pressure, DO, k600) {
+    .Call(`_NSmetabolism_computeRF`, temp, pressure, DO, k600)
+}
+
+#' Compute gas transfer velocity for oxygen at a given temperature (m/day)
+#' @param temp Water temperature (degrees C)
+#' @param k600 Gas transfer coefficient for Schmidt number of 600 (m/day)
+#' @references Wanninkhof R. (1992). Relationship between wind speed and gas exchange over the
+#'    ocean. Journal of Geophysical Research, 97, 7373.
+#'
+#'    Van de Bogert, M.C., Carpenter, S.R., Cole, J.J. & Pace, M.L. (2007). Assessing pelagic 
+#'    and benthic metabolism using free water measurements. Limnology and Oceanography: 
+#'    Methods, 5, 145–155.
+#' @return k at the given temperature (m/day)
+kT <- function(temp, k600) {
+    .Call(`_NSmetabolism_kT`, temp, k600)
+}
+
+#' Compute dissolved oxygen saturation given temperature and pressure (mg/L OR g/m^3)
+#' @param temp Water temperature (degrees C)
+#' @param P atmospheric pressure, in hPa
+#' @references Benson BB and Krause D. 1984. The concentration and isotopic fractionation of
+#'     oxygen dissolved in freshwater and seawater in equilibrium with the atmosphere. 
+#'     Limnol. Oceanogr., 29, 620–632.
+#'     
+#' Benson BB and Krause D. 1980. The concentration and isotopic fractionation of gases
+#'     		dissolved in freshwater in equilibrium with the atmosphere. 1. Oxygen.  Limnol. 
+#'     		Oceanogr., 25(4):662-671
+#' @return oxygen saturation concentration at given temperature and pressure
+osat <- function(temp, P) {
+    .Call(`_NSmetabolism_osat`, temp, P)
+}
+
+#' Compute metabolism using pixels
+#' @param pixdf The pixel data frame to construct the pixels
+#' @param light Matrix of light readings; pixels in rows, light readings in columns
+#' @param temperature Water temperature (degrees C)
+#' @param lP1 The log of the slope of the PI curve
+#' @param lP2 The log of the saturation term of the PI curve
+#' @param er24_20 Ecosystem respiration rate at 20 degrees (gO2 / [m^2 * day])
+#'	@param variable; the variable to compute
+#' @return Matrix; computed GPP or ER for each pixel at each time step
+pixelMetabolism <- function(pixdf, light, temperature, pressure, do_init, lP1, lP2, er24_20, k600, variable) {
+    .Call(`_NSmetabolism_pixelMetabolism`, pixdf, light, temperature, pressure, do_init, lP1, lP2, er24_20, k600, variable)
+}
+

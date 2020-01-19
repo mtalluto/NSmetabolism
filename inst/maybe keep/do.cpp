@@ -42,58 +42,8 @@ double NSM::advection(double inputFlux, double DOconc, double Q, double area, do
 
 
 
-double NSM::er(double temp, double ER24_20) {
-	if(ER24_20 > 0)
-		throw std::range_error("DO concentration must be <= 0");
-	return ER24_20 * pow(1.045, temp - 20);
-}
 
 
-double NSM::reaeration(double temp, double pressure, double DO, double k600) {
-	// kT in m/day, osat in g/m^3, yields g/(m^2*day)
-	return kT(temp, k600) * (osat(temp, pressure) - DO);
-}
-
-
-double NSM::kT(double temp, double k600) {
-	if(k600 < 0)
-		throw std::range_error("k600 must be positive");
-
-	// compute Schmidt number for oxygen (dimensionless)
-	// parameters from Wanninkhof 1992. appendix
-	double Sc = 1800.6 - 120.10 * temp + 3.7818 * std::pow(temp,2) - 0.047608 * std::pow(temp, 3);
-	
-	// Van de Bogert et al eqn 5
-	return k600 * std::pow(Sc / 600, -0.5);
-}
-
-
-
-double NSM::osat(double temp, double P) {  
-	double hPaPerAtm = 1013.2500;
-
-	double tempK = temp + 273.15;
-	double Patm = P / hPaPerAtm;
-
-	// C*o, the unit standard atmospheric concentration by volume for oxygen; in mg/L
-	// eqn 32 from Benson and Krause 1984.
-	double Cstaro = std::exp(-139.34411 + (1.575701e5 / tempK) - 
-		(6.642308e7 / std::pow(tempK, 2)) + (1.243800e10 / std::pow(tempK, 3)) - 
-		(8.621949e11 / std::pow(tempK, 4)));
-
-	// Benson and Krause 1980 eqn 13, 
-	// the negative of the second pressure coefficient in the virial expansion for 
-	// the real behavior of oxygen.
-	double theta = 0.000975 - 1.426e-5 * temp + 6.436e-8 * std::pow(temp, 2);
-
-	// Benson and Krause 1980 eqn 23
-	// the saturated vapor pressure of water in atmospheres at the temperature of equilibrium.
-	// in atmospheres
-	double Pwv = std::exp(11.8571 - (3840.7 / tempK) - (216961 / std::pow(tempK, 2)));
-
-	// Benson and Krause 1980 eqn 28
-	return Cstaro * ((Patm - Pwv) * (1 - theta * Patm)) / ((1 - Pwv) * (1 - theta));
-}
 
 
 
@@ -124,21 +74,21 @@ double NSM::osat(double temp, double P) {
 	* @param pressure Atmospheric pressure (hPa)
 	* @return double; derivative of dissolved oxygen with respect to time
 */
-// double dDOdt (const Rcpp::NumericVector &params, const Rcpp::NumericVector &data, 
-// 			double inputDOMass, double DOPrev, double light, double waterTemp, double pressure) {
-// 	if(data['z'] <= 0)
-// 		throw std::range_error("Depth (z) must be positive");
+double dDOdt (const Rcpp::NumericVector &params, const Rcpp::NumericVector &data, 
+			double inputDOMass, double DOPrev, double light, double waterTemp, double pressure) {
+	if(data['z'] <= 0)
+		throw std::range_error("Depth (z) must be positive");
 
-// 	double advection = computeAdvection(inputDOMass, DOPrev, data["Q"], data["area"], data["dx"]);
-// 	NOTE UNIT CHANGE - advection in g/(m^3 * min), others in g/(m^3 * day)
-// 	double gpp = computeGPP(light, params["lP1"], params["lP2"]);
-// 	double er = computeER(waterTemp, params["ER24"]);
-// 	double rf = computeRF(waterTemp, pressure, DOPrev, params["k600"]);
+	double advection = computeAdvection(inputDOMass, DOPrev, data["Q"], data["area"], data["dx"]);
+	NOTE UNIT CHANGE - advection in g/(m^3 * min), others in g/(m^3 * day)
+	double gpp = computeGPP(light, params["lP1"], params["lP2"]);
+	double er = computeER(waterTemp, params["ER24"]);
+	double rf = computeRF(waterTemp, pressure, DOPrev, params["k600"]);
 
-// convert everything to min
-// 	double ddodt = advection + ((gpp + er + rf) / data["z"]) / (24 * 60); 
-// 	return ddodt;
-// }
+convert everything to min
+	double ddodt = advection + ((gpp + er + rf) / data["z"]) / (24 * 60); 
+	return ddodt;
+}
 
 
 
