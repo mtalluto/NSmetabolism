@@ -1,8 +1,8 @@
 #include "../inst/include/pixel.h"
-#include <Rcpp.h>
+#include "../inst/include/params.h"
 #include "../inst/include/metabolism.h"
 #include "../inst/include/check.h"
-
+#include <Rcpp.h>
 
 /*
 	Pixel class
@@ -14,6 +14,10 @@
  	The following functions compute everything needed for metabolism in a pixel
  	all take current time step as a parameter, and look up internally the relevant information
 
+	simulate_os: Run the n-station simulation for _nt time steps, solving the dDOdt
+		equation; by default will cache daily gpp and in situ er
+	dDOdt: Time derivative of dissolved oxygen at time step t considering upstream/lateral input; 
+		requires that the simulation be run up to time t-1 before hand
 	simulate_os: Run the one-station simulation for _nt time steps, solving the dDOdt_os
 		equation; by default will cache daily gpp and in situ er
 	dDOdt_os: Time derivative of dissolved oxygen at time step t for a single station; 
@@ -22,6 +26,22 @@
 	er: Compute ecosystem respiration at a given time step g/(m^3 * day)
 	rf: Compute reaeration flux at a given time step g/(m^3 * day)
 */
+void NSM::Pixel::simulate(bool cache) {
+	if(cache) {
+		_gpp_days = std::vector<double> (ndays(), 0);
+		_er_days = std::vector<double> (ndays(), 0);
+	}
+
+	for(_timestep = 1; _timestep < _nt; ++_timestep) {
+		_DO.at(_timestep) = _DO.at(_timestep - 1) + dDOdt(_timestep, cache) * _dt;
+	}
+}
+
+double NSM::Pixel::dDOdt (int t, bool cache) {
+	return advection(t) + dDOdt_os(t, cache); 
+}
+
+
 void NSM::Pixel::simulate_os(bool cache) {
 	if(cache) {
 		_gpp_days = std::vector<double> (ndays(), 0);
@@ -69,6 +89,55 @@ double NSM::Pixel::er(int t) {
 double NSM::Pixel::rf(int t) {
 	return NSM::reaeration(_temperature.at(t), _pressure.at(t), _DO.at(t), _pars->k600);
 }
+
+
+/**
+	* Compute advective concentration flux (g/[m^3 * min])
+	* @return double; dissolved oxygen concentration flux (g/[m^3 * min])
+*/
+
+double NSM::Pixel::advection(int t) {
+
+	// Input DO mass flux (g/min) from upstream and lateral input for previous time step
+	double inputFlux = _input_flux(t - 1);
+
+	// Output DO mass flux (g/min) for the previous time step 
+	double outputFlux = _ox_mass_flux(t - 1);
+
+	return (-1/_area()) * (outputFlux - inputFlux)/_length;
+}
+
+
+/**
+	* Compute oxygen flux from the pixel at a particular time (g/min)
+*/
+double NSM::Pixel::_ox_mass_flux(int t) const {
+	return NSM::oxygen_flux(_DO.at(t), _discharge);
+}
+
+
+/**
+	* Compute input flux (g/min) by summing across all sources
+ 	* @return total input flux (g/min)
+*/
+double NSM::Pixel::_input_flux(int t) const {
+	double inFlux = 0;
+	double inQ = 0;
+	if(!_upstream.empty()) {
+		for(const auto &us : _upstream) {
+			inFlux += us->_ox_mass_flux(t);
+			inQ += us->_discharge;
+		}
+	}
+
+	double lateralQ = _discharge - inQ;
+	if(lateralQ < 0)
+		lateralQ = 0;
+
+	inFlux += _lateral_do * lateralQ;
+	return inFlux;
+}
+
 
 /**
  	METABOLISM RESULTS FUNCTIONS

@@ -1,5 +1,22 @@
-#include "../inst/include/pixel.h"
+#include "../inst/include/params.h"
 #include <Rcpp.h>
+
+NSM::Params::Params(const NSM::Params &p) : lP1(p.lP1), lP2(p.lP2), er24_20(p.er24_20), 
+	k600(p.k600)
+{}
+
+NSM::Params::Params(double lp1, double lp2, double er, double k) : lP1(lp1), lP2(lp2), 
+	er24_20(er), k600(k)
+{}
+
+// NSM::Params& NSM::Params::operator= (const Params& rhs) {
+// 	lP1 = rhs.lP1;
+// 	lP2 = rhs.lP2;
+// 	er24_20 = rhs.er24_20;
+// 	k600 = rhs.k600;
+// 	return *this;
+// }
+
 
 std::vector<NSM::param_ptr> NSM::param_from_r(const Rcpp::NumericVector &lP1, 
 		const Rcpp::NumericVector &lP2, const Rcpp::NumericVector &er24_20, 
@@ -15,3 +32,4 @@ std::vector<NSM::param_ptr> NSM::param_from_r(const Rcpp::NumericVector &lP1,
 			(new NSM::Params {lP1.at(i), lP2.at(i), er24_20.at(i), k600.at(i)}));
 	return par_vector;
 }
+

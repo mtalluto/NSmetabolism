@@ -86,3 +86,11 @@ double NSM::osat(double temp, double P) {
 	return Cstaro * ((Patm - Pwv) * (1 - theta * Patm)) / ((1 - Pwv) * (1 - theta));
 }
 
+
+
+
+double NSM::oxygen_flux(double diss_ox, double discharge) {
+	// converts discharge into m^3/min
+	const static double sPerMin = 60;
+	return discharge * sPerMin * diss_ox;
+}

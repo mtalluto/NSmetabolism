@@ -77,6 +77,18 @@ namespace NSM {
 		* @return oxygen saturation concentration at given temperature and pressure
 	*/
 	double osat(double temp, double P);
+
+
+	/**
+	 * @brief      
+	 * Compute oxygen mass flux
+	 *
+	 * @param  diss_ox    DO concentration, g/m^3
+	 * @param  discharge  discharge, m^3/minute
+	 *
+	 * @return     Mass flux, g O2/second
+	 */
+ 	double oxygen_flux(double diss_ox, double discharge);
 }
 
 

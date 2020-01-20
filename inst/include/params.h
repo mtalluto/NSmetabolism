@@ -2,6 +2,7 @@
 #define params_h
 
 #include <memory>
+#include <Rcpp.h>
 
 /**
  * @brief      Class for holding parameters for the metabolism model 
@@ -13,6 +14,9 @@ namespace NSM {
 		double lP2;
 		double er24_20;
 		double k600;
+
+		Params(const Params &p);
+		Params(double lp1, double lp2, double er, double k);
 	};
 
 	typedef std::shared_ptr<Params> param_ptr;
