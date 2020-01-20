@@ -1,6 +1,7 @@
-#include <Rcpp.h>
 #include "../inst/include/pixel.h"
+#include <Rcpp.h>
 #include "../inst/include/metabolism.h"
+#include "../inst/include/check.h"
 
 
 /*
@@ -79,20 +80,20 @@ double NSM::Pixel::rf(int t) {
 	do_history: Dissolved oxygen at each time step
 */
 
-std::vector<double> NSM::Pixel::daily_gpp() {
+const std::vector<double> & NSM::Pixel::daily_gpp() {
 	if(_timestep < _nt || _gpp_days.empty())
 		throw std::range_error("Run simulation with cache=true before requesting daily gpp");
 	return _gpp_days;
 }
 
-std::vector<double> NSM::Pixel::daily_insitu_er() {
+const std::vector<double> & NSM::Pixel::daily_er() {
 	if(_timestep < _nt || _er_days.empty())
 		throw std::range_error("Run simulation with cache=true before requesting daily er");
 	return _er_days;
 
 }
 
-std::vector<double> NSM::Pixel::do_history() {
+const std::vector<double> & NSM::Pixel::do_history() {
 	if(_timestep < _nt)
 		throw std::range_error("Run simulation before requesting the do_history");
 	return _DO;
@@ -107,11 +108,13 @@ NSM::Pixel::Pixel(const param_ptr &pars, double dt, double nt, double depth, dou
 		_nt(nt), _dt(dt), _timestep(0), _pars(pars), _depth(depth), _light(light), 
 		_temperature(temperature), _pressure(pressure) , _DO(std::vector<double> (nt, -1))
 {
-	// input validation needs to happen here
-	// check that data vectors are long enough given dt and nt
-	// check that values are valid
-
 	_DO.at(0) = DO_init;
+
+	// input validation needs to happen here
+	// still missing: depth, vector length given nt
+	check_light(Rcpp::wrap(_light));
+	check_DO(Rcpp::wrap(std::vector<double> (_DO.begin(), _DO.begin()+1)));
+	check_pressure(Rcpp::wrap(_pressure));
 
 }
 
@@ -121,16 +124,33 @@ NSM::Pixel::Pixel(const param_ptr &pars, double dt, double nt, double depth, dou
 std::vector<NSM::Pixel> NSM::dfToPixel(const Rcpp::DataFrame &pixDf, 
 		const Rcpp::NumericMatrix &light, const Rcpp::NumericMatrix &temperature,
 		const Rcpp::NumericMatrix &pressure, const std::vector<param_ptr> &pars, 
-		double dt, double nt) {
+		double dt) {
 
-	if(pixDf.nrow() != light.nrow() || pixDf.nrow() != pars.size() || 
-				light.nrow() != temperature.nrow() || light.ncol() != temperature.ncol() ||
-				pixDf.nrow() != pressure.nrow())
-		throw std::range_error("All pixel elements must have the same dimensions");
+	int nt = light.ncol();
+
+	// dimensions checking
+	{
+		int npix = pixDf.nrow();
+		if(light.nrow() != npix)
+			throw std::length_error("nrow(light) != nrow(pixdf)");
+		if(temperature.nrow() != npix)
+			throw std::length_error("nrow(temperature) != nrow(pixdf)");
+		if(pressure.nrow() != npix)
+			throw std::length_error("nrow(pressure) != nrow(pixdf)");
+		if(pars.size() != npix)
+			throw std::length_error("length(pars) != nrow(pixdf)");
+
+		if(temperature.ncol() != nt)
+			throw std::length_error("ncol(light) != ncol(temperature)");
+		if(pressure.ncol() != nt)
+			throw std::length_error("ncol(light) != ncol(pressure)");
+	}
+
+
 
 	std::vector<NSM::Pixel> result;
 	Rcpp::NumericVector z = pixDf["depth"];
-	Rcpp::NumericVector DO = pixDf["DO_start"];	
+	Rcpp::NumericVector DO = pixDf["DO_i"];	
 	for(int i = 0; i < pixDf.nrow(); ++i) {
 		Rcpp::NumericVector lvect = light.row(i);
 		std::vector<double> l = Rcpp::as<std::vector<double> >(lvect);

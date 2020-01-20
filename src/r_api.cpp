@@ -145,58 +145,100 @@ Rcpp::NumericVector osat(const Rcpp::NumericVector &temp, const Rcpp::NumericVec
 
 
 
-//' Compute metabolism using pixels
-//' @param pixdf The pixel data frame to construct the pixels
+//' @name pixelMetabolism
+//' @aliases pixelGPP
+//' @aliases pixelER
+//' @title Compute metabolic parameters using pixels
+//' @param pixdf The pixel data frame to construct the pixels, see 'details'
 //' @param light Matrix of light readings; pixels in rows, light readings in columns
 //' @param temperature Water temperature (degrees C)
 //' @param lP1 The log of the slope of the PI curve
 //' @param lP2 The log of the saturation term of the PI curve
 //' @param er24_20 Ecosystem respiration rate at 20 degrees (gO2 / [m^2 * day])
 //'	@param variable; the variable to compute
-//' @return Matrix; computed GPP or ER for each pixel at each time step
+//'	@param dt; the size of a time step, in minutes
+//' @details These functions all take the same signature, and compute the time series of
+//'		GPP and ER for pixelGPP and pixelER, or run the full simulation for pixelMetabolism.
+//'
+//' The pixel df must have the following named elements
+//'		* depth: depth of the pixel, in m
+//'		* DO_i: initial dissolved oxygen concentration
+//'
+//' @return A named List with elements DO (a matrix with predicted DO time series), 
+//'		GPP (daily GPP), and ER (daily in-situ ER)
 // [[Rcpp::export]]
-Rcpp::NumericMatrix pixelMetabolism(const Rcpp::DataFrame &pixdf,  
+Rcpp::List pixelMetabolism(const Rcpp::DataFrame &pixdf,  
 			const Rcpp::NumericMatrix &light, const Rcpp::NumericMatrix &temperature, 
-			const Rcpp::NumericMatrix &pressure, const Rcpp::NumericVector &do_init,
-			const Rcpp::NumericVector &lP1, const Rcpp::NumericVector &lP2, 
-			const Rcpp::NumericVector &er24_20, const Rcpp::NumericVector &k600,
-			std::string variable) {
+			const Rcpp::NumericMatrix &pressure, const Rcpp::NumericVector &lP1, 
+			const Rcpp::NumericVector &lP2, const Rcpp::NumericVector &er24_20, 
+			const Rcpp::NumericVector &k600, double dt = 10) {
 
-	for(int i = 0; i < light.nrow(); ++i)
-		check_light(light.row(i));
-
-	if(light.nrow() != pixdf.nrow() || light.nrow() != lP1.size() || 
-			light.nrow() != temperature.nrow() || light.ncol() != temperature.ncol() ||
-			light.nrow() != lP2.size() || light.nrow() != er24_20.size() || 
-			pixdf.nrow() != pressure.size() || pixdf.nrow() != do_init.size() || 
-			pixdf.nrow() != k600.size())
-		throw std::length_error("All inputs must have conforming dimensions");
-
-	// need to initialize parameters manually
-	// NSM::param_ptr pars (new NSM::Params {lP1, lP2});
-	std::vector<NSM::param_ptr> par_vector;
-	for(int i = 0; i < lP1.size(); ++i)
-		par_vector.push_back(NSM::param_ptr 
-			(new NSM::Params {lP1.at(i), lP2.at(i), er24_20.at(i), k600.at(i)}));
-
-	// make pixels
+	std::vector<NSM::param_ptr> par_vector = NSM::param_from_r(lP1, lP2, er24_20, k600);
 	std::vector<NSM::Pixel> pixes = 
-			NSM::dfToPixel(pixdf, light, temperature, pressure, par_vector);
+		NSM::dfToPixel(pixdf, light, temperature, pressure, par_vector, dt);
 
 	// compute metab for all
-	Rcpp::NumericMatrix result (light.nrow(), light.ncol());
-	for(int t = 0; t < light.ncol(); ++t) {
-		for(int p = 0; p < pixes.size(); ++p) {
-			if(variable == "gpp") 
-				result(p, t) = pixes.at(p).gpp(t);
-			else if(variable == "er")
-				result(p, t) = pixes.at(p).er(t);
-			// else if(variable == "rf")
-			// 	result(p, t) = pixes.at(p).rf(t);
-			else
-				throw std::range_error("Unknown variable: " + variable);
+	Rcpp::NumericMatrix dailyGPP (light.nrow(), pixes.at(0).ndays());
+	Rcpp::NumericMatrix dailyER (light.nrow(), pixes.at(0).ndays());
+	Rcpp::NumericMatrix dissOx (light.nrow(), light.ncol());
+	for(int p = 0; p < pixes.size(); ++p) {
+		NSM::Pixel &pix = pixes.at(p);
+		pix.simulate_os();
+		for(int i = 0; i < pix.do_history().size(); ++i)
+			dissOx(p, i) = pix.do_history().at(i);
+
+		for(int d = 0; d < pix.ndays(); ++d) {
+			dailyGPP(p, d) = pix.daily_gpp().at(d);
+			dailyER(p, d) = pix.daily_er().at(d);
 		}
 	}
 
+	Rcpp::List result (Rcpp::List::create(Rcpp::Named("DO") = dissOx, 
+		Rcpp::Named("GPP") = dailyGPP, Rcpp::Named("ER") = dailyER));
 	return result;
 }
+
+//' @rdname pixelMetabolism
+//' @return Matrix; computed GPP for each pixel
+// [[Rcpp::export]]
+Rcpp::NumericMatrix pixelGPP(const Rcpp::DataFrame &pixdf,  
+			const Rcpp::NumericMatrix &light, const Rcpp::NumericMatrix &temperature, 
+			const Rcpp::NumericMatrix &pressure, const Rcpp::NumericVector &lP1, 
+			const Rcpp::NumericVector &lP2, const Rcpp::NumericVector &er24_20, 
+			const Rcpp::NumericVector &k600, double dt = 10) {
+
+	std::vector<NSM::param_ptr> par_vector = NSM::param_from_r(lP1, lP2, er24_20, k600);
+	std::vector<NSM::Pixel> pixes = 
+		NSM::dfToPixel(pixdf, light, temperature, pressure, par_vector, dt);
+
+	Rcpp::NumericMatrix result (light.nrow(), light.ncol());
+	for(int t = 0; t < light.ncol(); ++t) {
+		for(int p = 0; p < pixes.size(); ++p) {
+			result(p, t) = pixes.at(p).gpp(t);
+		}
+	}
+	return result;
+}
+
+//' @rdname pixelMetabolism
+//' @return Matrix; computed ER for each pixel
+// [[Rcpp::export]]
+Rcpp::NumericMatrix pixelER(const Rcpp::DataFrame &pixdf,  
+			const Rcpp::NumericMatrix &light, const Rcpp::NumericMatrix &temperature, 
+			const Rcpp::NumericMatrix &pressure, const Rcpp::NumericVector &lP1, 
+			const Rcpp::NumericVector &lP2, const Rcpp::NumericVector &er24_20, 
+			const Rcpp::NumericVector &k600, double dt = 10) {
+	
+	std::vector<NSM::param_ptr> par_vector = NSM::param_from_r(lP1, lP2, er24_20, k600);
+	std::vector<NSM::Pixel> pixes = 
+		NSM::dfToPixel(pixdf, light, temperature, pressure, par_vector, dt);
+
+	Rcpp::NumericMatrix result (light.nrow(), light.ncol());
+	for(int t = 0; t < light.ncol(); ++t) {
+		for(int p = 0; p < pixes.size(); ++p) {
+			result(p, t) = pixes.at(p).er(t);
+		}
+	}
+	return result;
+}
+

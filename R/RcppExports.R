@@ -65,16 +65,40 @@ osat <- function(temp, P) {
     .Call(`_NSmetabolism_osat`, temp, P)
 }
 
-#' Compute metabolism using pixels
-#' @param pixdf The pixel data frame to construct the pixels
+#' @name pixelMetabolism
+#' @aliases pixelGPP
+#' @aliases pixelER
+#' @title Compute metabolic parameters using pixels
+#' @param pixdf The pixel data frame to construct the pixels, see 'details'
 #' @param light Matrix of light readings; pixels in rows, light readings in columns
 #' @param temperature Water temperature (degrees C)
 #' @param lP1 The log of the slope of the PI curve
 #' @param lP2 The log of the saturation term of the PI curve
 #' @param er24_20 Ecosystem respiration rate at 20 degrees (gO2 / [m^2 * day])
 #'	@param variable; the variable to compute
-#' @return Matrix; computed GPP or ER for each pixel at each time step
-pixelMetabolism <- function(pixdf, light, temperature, pressure, do_init, lP1, lP2, er24_20, k600, variable) {
-    .Call(`_NSmetabolism_pixelMetabolism`, pixdf, light, temperature, pressure, do_init, lP1, lP2, er24_20, k600, variable)
+#'	@param dt; the size of a time step, in minutes
+#' @details These functions all take the same signature, and compute the time series of
+#'		GPP and ER for pixelGPP and pixelER, or run the full simulation for pixelMetabolism.
+#'
+#' The pixel df must have the following named elements
+#'		* depth: depth of the pixel, in m
+#'		* DO_i: initial dissolved oxygen concentration
+#'
+#' @return A named List with elements DO (a matrix with predicted DO time series), 
+#'		GPP (daily GPP), and ER (daily in-situ ER)
+pixelMetabolism <- function(pixdf, light, temperature, pressure, lP1, lP2, er24_20, k600, dt = 10) {
+    .Call(`_NSmetabolism_pixelMetabolism`, pixdf, light, temperature, pressure, lP1, lP2, er24_20, k600, dt)
+}
+
+#' @rdname pixelMetabolism
+#' @return Matrix; computed GPP for each pixel
+pixelGPP <- function(pixdf, light, temperature, pressure, lP1, lP2, er24_20, k600, dt = 10) {
+    .Call(`_NSmetabolism_pixelGPP`, pixdf, light, temperature, pressure, lP1, lP2, er24_20, k600, dt)
+}
+
+#' @rdname pixelMetabolism
+#' @return Matrix; computed ER for each pixel
+pixelER <- function(pixdf, light, temperature, pressure, lP1, lP2, er24_20, k600, dt = 10) {
+    .Call(`_NSmetabolism_pixelER`, pixdf, light, temperature, pressure, lP1, lP2, er24_20, k600, dt)
 }
 

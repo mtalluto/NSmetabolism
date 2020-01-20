@@ -44,9 +44,9 @@ namespace NSM {
 		int ndays() {return (_nt * _dt) / (24*60);}
 		int day_from_t(int t) {return (t * _dt) / (24*60);}
 
-		std::vector<double> daily_gpp();
-		std::vector<double> daily_insitu_er();
-		std::vector<double> do_history();
+		const std::vector<double> & daily_gpp();
+		const std::vector<double> & daily_er();
+		const std::vector<double> & do_history();
 
 		Pixel (const param_ptr &pars, double dt, double nt, double depth, double DO_init, 
 			const std::vector<double> &light, 
@@ -62,15 +62,15 @@ namespace NSM {
 	  	* @param pressure Matrix of pressure readings, one row per pixel, one column per day
 	  	* @param pars vector of pointers to NSM::Params object giving parameters relevant for 
 	  			each pixel
-	  	* @param dt Size (in minutes) of a time step, defaults to 10 min
-	 	* @param nt Number of time steps, defaults to 1 day assuming dt=10
+	  	* @param dt Size (in minutes) of a time step, defaults to 10 min; number of time steps
+	 		will be inferred from the number of columns
 
 		* @return Vector of pixels
 	*/
 	std::vector<Pixel> dfToPixel(const Rcpp::DataFrame &pixDf, 
 		const Rcpp::NumericMatrix &light, const Rcpp::NumericMatrix &temperature, 
 		const Rcpp::NumericMatrix &pressure, const std::vector<param_ptr> &par, 
-		double dt = 10, double nt = (24*60) / 10);
+		double dt = 10);
 
 }
 

@@ -69,8 +69,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // pixelMetabolism
-Rcpp::NumericMatrix pixelMetabolism(const Rcpp::DataFrame& pixdf, const Rcpp::NumericMatrix& light, const Rcpp::NumericMatrix& temperature, const Rcpp::NumericMatrix& pressure, const Rcpp::NumericVector& do_init, const Rcpp::NumericVector& lP1, const Rcpp::NumericVector& lP2, const Rcpp::NumericVector& er24_20, const Rcpp::NumericVector& k600, std::string variable);
-RcppExport SEXP _NSmetabolism_pixelMetabolism(SEXP pixdfSEXP, SEXP lightSEXP, SEXP temperatureSEXP, SEXP pressureSEXP, SEXP do_initSEXP, SEXP lP1SEXP, SEXP lP2SEXP, SEXP er24_20SEXP, SEXP k600SEXP, SEXP variableSEXP) {
+Rcpp::List pixelMetabolism(const Rcpp::DataFrame& pixdf, const Rcpp::NumericMatrix& light, const Rcpp::NumericMatrix& temperature, const Rcpp::NumericMatrix& pressure, const Rcpp::NumericVector& lP1, const Rcpp::NumericVector& lP2, const Rcpp::NumericVector& er24_20, const Rcpp::NumericVector& k600, double dt);
+RcppExport SEXP _NSmetabolism_pixelMetabolism(SEXP pixdfSEXP, SEXP lightSEXP, SEXP temperatureSEXP, SEXP pressureSEXP, SEXP lP1SEXP, SEXP lP2SEXP, SEXP er24_20SEXP, SEXP k600SEXP, SEXP dtSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -78,13 +78,50 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type light(lightSEXP);
     Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type temperature(temperatureSEXP);
     Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type pressure(pressureSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type do_init(do_initSEXP);
     Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type lP1(lP1SEXP);
     Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type lP2(lP2SEXP);
     Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type er24_20(er24_20SEXP);
     Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type k600(k600SEXP);
-    Rcpp::traits::input_parameter< std::string >::type variable(variableSEXP);
-    rcpp_result_gen = Rcpp::wrap(pixelMetabolism(pixdf, light, temperature, pressure, do_init, lP1, lP2, er24_20, k600, variable));
+    Rcpp::traits::input_parameter< double >::type dt(dtSEXP);
+    rcpp_result_gen = Rcpp::wrap(pixelMetabolism(pixdf, light, temperature, pressure, lP1, lP2, er24_20, k600, dt));
+    return rcpp_result_gen;
+END_RCPP
+}
+// pixelGPP
+Rcpp::NumericMatrix pixelGPP(const Rcpp::DataFrame& pixdf, const Rcpp::NumericMatrix& light, const Rcpp::NumericMatrix& temperature, const Rcpp::NumericMatrix& pressure, const Rcpp::NumericVector& lP1, const Rcpp::NumericVector& lP2, const Rcpp::NumericVector& er24_20, const Rcpp::NumericVector& k600, double dt);
+RcppExport SEXP _NSmetabolism_pixelGPP(SEXP pixdfSEXP, SEXP lightSEXP, SEXP temperatureSEXP, SEXP pressureSEXP, SEXP lP1SEXP, SEXP lP2SEXP, SEXP er24_20SEXP, SEXP k600SEXP, SEXP dtSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Rcpp::DataFrame& >::type pixdf(pixdfSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type light(lightSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type temperature(temperatureSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type pressure(pressureSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type lP1(lP1SEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type lP2(lP2SEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type er24_20(er24_20SEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type k600(k600SEXP);
+    Rcpp::traits::input_parameter< double >::type dt(dtSEXP);
+    rcpp_result_gen = Rcpp::wrap(pixelGPP(pixdf, light, temperature, pressure, lP1, lP2, er24_20, k600, dt));
+    return rcpp_result_gen;
+END_RCPP
+}
+// pixelER
+Rcpp::NumericMatrix pixelER(const Rcpp::DataFrame& pixdf, const Rcpp::NumericMatrix& light, const Rcpp::NumericMatrix& temperature, const Rcpp::NumericMatrix& pressure, const Rcpp::NumericVector& lP1, const Rcpp::NumericVector& lP2, const Rcpp::NumericVector& er24_20, const Rcpp::NumericVector& k600, double dt);
+RcppExport SEXP _NSmetabolism_pixelER(SEXP pixdfSEXP, SEXP lightSEXP, SEXP temperatureSEXP, SEXP pressureSEXP, SEXP lP1SEXP, SEXP lP2SEXP, SEXP er24_20SEXP, SEXP k600SEXP, SEXP dtSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Rcpp::DataFrame& >::type pixdf(pixdfSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type light(lightSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type temperature(temperatureSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type pressure(pressureSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type lP1(lP1SEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type lP2(lP2SEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type er24_20(er24_20SEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type k600(k600SEXP);
+    Rcpp::traits::input_parameter< double >::type dt(dtSEXP);
+    rcpp_result_gen = Rcpp::wrap(pixelER(pixdf, light, temperature, pressure, lP1, lP2, er24_20, k600, dt));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -95,7 +132,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_NSmetabolism_computeRF", (DL_FUNC) &_NSmetabolism_computeRF, 4},
     {"_NSmetabolism_kT", (DL_FUNC) &_NSmetabolism_kT, 2},
     {"_NSmetabolism_osat", (DL_FUNC) &_NSmetabolism_osat, 2},
-    {"_NSmetabolism_pixelMetabolism", (DL_FUNC) &_NSmetabolism_pixelMetabolism, 10},
+    {"_NSmetabolism_pixelMetabolism", (DL_FUNC) &_NSmetabolism_pixelMetabolism, 9},
+    {"_NSmetabolism_pixelGPP", (DL_FUNC) &_NSmetabolism_pixelGPP, 9},
+    {"_NSmetabolism_pixelER", (DL_FUNC) &_NSmetabolism_pixelER, 9},
     {NULL, NULL, 0}
 };
 

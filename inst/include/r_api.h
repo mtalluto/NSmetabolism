@@ -25,12 +25,19 @@ Rcpp::NumericVector osat(const Rcpp::NumericVector &temp, const Rcpp::NumericVec
 */
 
 // compute metabolism from pixel data
-Rcpp::NumericMatrix pixelMetabolism(const Rcpp::DataFrame &pixdf,  
+Rcpp::List pixelMetabolism(const Rcpp::DataFrame &pixdf,  
 			const Rcpp::NumericMatrix &light, const Rcpp::NumericMatrix &temperature, 
-			const Rcpp::NumericMatrix &pressure, const Rcpp::NumericVector &do_init,
-			const Rcpp::NumericVector &lP1, const Rcpp::NumericVector &lP2, 
-			const Rcpp::NumericVector &er24_20, const Rcpp::NumericVector &k600,
-			std::string variable);
-
-
+			const Rcpp::NumericMatrix &pressure, const Rcpp::NumericVector &lP1, 
+			const Rcpp::NumericVector &lP2, const Rcpp::NumericVector &er24_20, 
+			const Rcpp::NumericVector &k600, double dt);
+Rcpp::NumericMatrix pixelGPP(const Rcpp::DataFrame &pixdf,  
+			const Rcpp::NumericMatrix &light, const Rcpp::NumericMatrix &temperature, 
+			const Rcpp::NumericMatrix &pressure, const Rcpp::NumericVector &lP1, 
+			const Rcpp::NumericVector &lP2, const Rcpp::NumericVector &er24_20, 
+			const Rcpp::NumericVector &k600, double dt);
+Rcpp::NumericMatrix pixelER(const Rcpp::DataFrame &pixdf,  
+			const Rcpp::NumericMatrix &light, const Rcpp::NumericMatrix &temperature, 
+			const Rcpp::NumericMatrix &pressure, const Rcpp::NumericVector &lP1, 
+			const Rcpp::NumericVector &lP2, const Rcpp::NumericVector &er24_20, 
+			const Rcpp::NumericVector &k600, double dt);
 #endif
