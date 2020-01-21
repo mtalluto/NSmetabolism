@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <vector>
+#include <unordered_set>
 #include <Rcpp.h>
 
 namespace NSM {
@@ -14,7 +15,6 @@ namespace NSM {
 		int _timestep;
 
 		std::shared_ptr<Params> _pars;
-	// 	int id;
 		double _discharge; // m^3/sec
 		double _depth; // in m
 		double _width; // in m
@@ -23,16 +23,15 @@ namespace NSM {
 
 	// 	// eventually provide a friend class LightArray that does the heavy lifting;
 	// 	// accessed with light(id, time); thus can abstract all the spatial crap
-		std::vector<double> _light; 
-		std::vector<double> _temperature; 
-		std::vector<double> _pressure;
+		std::shared_ptr<std::vector<double> > _light; 
+		std::shared_ptr<std::vector<double> > _temperature; 
+		std::shared_ptr<std::vector<double> > _pressure;
 		std::vector<double> _DO;
 
 		std::vector<double> _gpp_days;
 		std::vector<double> _er_days;
 
-	// 	// std::shared_ptr<Pixel> downstream;
-	 	std::vector<std::shared_ptr<Pixel> > _upstream;
+	 	std::unordered_set<std::shared_ptr<Pixel> > _upstream;
 	
 		double _input_flux(int t) const;
 		double _ox_mass_flux(int t) const;
@@ -41,6 +40,7 @@ namespace NSM {
 		double rf(int t);
 
 	public:
+		void add_upstream(const std::shared_ptr<Pixel> p) {_upstream.insert(p);};
 		void simulate(bool cache = true);
 		double dDOdt(int t, bool cache = false);
 		void simulate_os(bool cache = true);
@@ -59,11 +59,7 @@ namespace NSM {
 			double DO_init, const std::vector<double> &light, 
 			const std::vector<double> &temperature, const std::vector<double> &pressure);
 
-		// STOP - need to implement this guy, which means changing how Pixel is implemented
-		// behind the scenes, needs pointers for light temperature etc
-		// don't have to change the ctor above, can just copy the vectors to not break earlier
-		// functions
-		Pixel (const std::shared_ptr<Params> &pars, double dt, double nt, int id, 
+		Pixel (const std::shared_ptr<Params> &pars, double dt, double nt,
 			double discharge, double depth, double width, double length, double DO_init, 
 			double lateral, std::shared_ptr<std::vector<double> > light, 
 			std::shared_ptr<std::vector<double> > temperature, 

@@ -12,8 +12,6 @@ namespace NSM {
 	class Pixel;
 
 	class Reach {
-		// we assume light, water temperature, pressure. 
-		// parameters are not variable at the reach scale
 		std::shared_ptr<std::vector<double> > _light;
 		std::shared_ptr<std::vector<double> > _temperature;
 		std::shared_ptr<std::vector<double> > _pressure;
@@ -23,6 +21,11 @@ namespace NSM {
 		// map with pixelID as key
 		std::map<int, std::shared_ptr<Pixel> > _pixels;
 
+		// pointers to the pixels at the top and bottom of the reach
+		std::shared_ptr<Pixel> _bottom;
+		std::shared_ptr<Pixel> _top;
+
+
 		Reach();
 		Reach(const Params & p);
 	public:
@@ -30,11 +33,8 @@ namespace NSM {
 		// 	const Rcpp::NumericVector &pressure, const Params &pars);
 		Reach(const Rcpp::DataFrame &pixData, const Rcpp::NumericMatrix &light, 
 			const Rcpp::NumericMatrix &temperature, const Rcpp::NumericMatrix &pressure, 
-			const NSM::Params & pars, double lateral_do, double dt);
-		// Reach(, 
-		// const Rcpp::NumericMatrix &light, const Rcpp::NumericMatrix &temperature, 
-		// const Rcpp::NumericMatrix &pressure, const std::vector<std::shared_ptr<Params> > &par, 
-		// double dt = 10);
+			const NSM::Params & pars, const Rcpp::NumericMatrix &topology, int bottom, 
+			int top, double lateral_do, double dt);
 	};
 }
 

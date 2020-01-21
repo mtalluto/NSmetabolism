@@ -79,15 +79,15 @@ double NSM::Pixel::dDOdt_os (int t, bool cache) {
 }
 
 double NSM::Pixel::gpp(int t) {
-	return NSM::gpp(_light.at(t), _pars->lP1, _pars->lP2);
+	return NSM::gpp(_light->at(t), _pars->lP1, _pars->lP2);
 }
 
 double NSM::Pixel::er(int t) {
-	return NSM::er(_temperature.at(t), _pars->er24_20);
+	return NSM::er(_temperature->at(t), _pars->er24_20);
 }
 
 double NSM::Pixel::rf(int t) {
-	return NSM::reaeration(_temperature.at(t), _pressure.at(t), _DO.at(t), _pars->k600);
+	return NSM::reaeration(_temperature->at(t), _pressure->at(t), _DO.at(t), _pars->k600);
 }
 
 
@@ -171,28 +171,54 @@ const std::vector<double> & NSM::Pixel::do_history() {
 
 
 
-NSM::Pixel::Pixel(const param_ptr &pars, double dt, double nt, double depth, double DO_init,
-			const std::vector<double> &light, 
-			const std::vector<double> &temperature, const std::vector<double> &pressure) : 
-		_nt(nt), _dt(dt), _timestep(0), _pars(pars), _depth(depth), _light(light), 
+
+/*
+ 	CONSTRUCTORS
+*/
+
+/*
+	Simple constructor for a single pixel, meant for one-station model
+*/
+NSM::Pixel::Pixel(const std::shared_ptr<Params> &pars, double dt, double nt, double depth, 
+		double DO_init, const std::vector<double> &light, const std::vector<double> &temperature,
+		const std::vector<double> &pressure) : 
+	Pixel(pars, dt, nt, 0, depth, 0, 0, DO_init, 0, 
+		std::make_shared<std::vector<double> >(light), 
+		std::make_shared<std::vector<double> >(temperature), 
+		std::make_shared<std::vector<double> >(pressure))
+{ }
+
+/*
+	Constructor for the n-station model, which has additional data requirements
+*/
+NSM::Pixel::Pixel (const std::shared_ptr<Params> &pars, double dt, double nt, 
+			double discharge, double depth, double width, double length, double DO_init, 
+			double lateral, std::shared_ptr<std::vector<double> > light, 
+			std::shared_ptr<std::vector<double> > temperature, 
+			std::shared_ptr<std::vector<double> > pressure) :
+		_nt(nt), _dt(dt), _timestep(0), _pars(pars), _discharge(discharge), _depth(depth),
+		_width(width), _length(length), _lateral_do(lateral), _light(light),
 		_temperature(temperature), _pressure(pressure) , _DO(std::vector<double> (nt, -1))
 {
 	_DO.at(0) = DO_init;
 
 	// input validation needs to happen here
-	// still missing: depth, vector length given nt
-	check_light(Rcpp::wrap(_light));
+	// items remaining to check:
+	//    dt, nt, discharge, depth, width, length, lateral, 
+	check_light(Rcpp::wrap(*_light));
 	check_DO(Rcpp::wrap(std::vector<double> (_DO.begin(), _DO.begin()+1)));
-	check_pressure(Rcpp::wrap(_pressure));
-
+	check_pressure(Rcpp::wrap(*_pressure));
 }
+
+
 
 /*
 	Ways to construct from R objects
 */
 std::vector<NSM::Pixel> NSM::dfToPixel(const Rcpp::DataFrame &pixDf, 
 		const Rcpp::NumericMatrix &light, const Rcpp::NumericMatrix &temperature,
-		const Rcpp::NumericMatrix &pressure, const std::vector<param_ptr> &pars, 
+		const Rcpp::NumericMatrix &pressure, 
+		const std::vector<std::shared_ptr<NSM::Params> > &pars, 
 		double dt) {
 
 	int nt = light.ncol();

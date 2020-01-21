@@ -69,7 +69,7 @@ irradiance <- function(dem, output_points, times, timezone, use_existing = FALSE
 
 		# bring the raster back into R
 		irr <- raster::raster(rgrass7::readRAST("irradiance_out"))
-		irrad_mat[,i] <- extract(irr, output_points)
+		irrad_mat[,i] <- raster::extract(irr, output_points)
 	}
 	irrad_mat
 }

@@ -7,6 +7,11 @@
 #include "../inst/include/params.h"
 #include "../inst/include/pixel.h"
 
+using std::shared_ptr;
+using std::vector;
+using Rcpp::NumericVector;
+using Rcpp::NumericMatrix;
+using NSM::Params;
 
 //' Compute gross primary productivity from light (g O2 / [m^2 * day])
 //' @details P1 is in units of (W*day)/gO2, P2 is in (m^2 * day) / gO2
@@ -19,15 +24,15 @@
 //' 
 //' @export
 // [[Rcpp::export]]
-Rcpp::NumericVector computeGPP(const Rcpp::NumericVector &light, const Rcpp::NumericVector &lP1, 
-		const Rcpp::NumericVector &lP2) {
+NumericVector computeGPP(const NumericVector &light, const NumericVector &lP1, 
+		const NumericVector &lP2) {
 	check_light(light);
 	if(light.size() != lP1.size() || light.size() != lP2.size())
 		throw std::length_error("All GPP inputs must have the same length");
 
-	Rcpp::NumericVector result (light.size());
+	NumericVector result (light.size());
 	for(int i = 0; i < light.size(); ++i) {
-		if(Rcpp::NumericVector::is_na(lP2(i)))
+		if(NumericVector::is_na(lP2(i)))
 			result(i) = NSM::gpp(light(i), lP1(i));
 		else
 			result(i) = NSM::gpp(light(i), lP1(i), lP2(i));
@@ -42,14 +47,12 @@ Rcpp::NumericVector computeGPP(const Rcpp::NumericVector &light, const Rcpp::Num
 //' @return Temperature-adjusted ER
 //' 
 // [[Rcpp::export]]
-Rcpp::NumericVector inSituER(const Rcpp::NumericVector &temperature, 
-			const Rcpp::NumericVector &ER24_20) {
-
+NumericVector inSituER(const NumericVector &temperature,  const NumericVector &ER24_20) {
 	if(ER24_20.size() != 1 && ER24_20.size() != temperature.size())
 		throw std::length_error("ER24_20 must have length equal to 1 or to length(temperature)");
 
 
-	Rcpp::NumericVector result (temperature.size());
+	NumericVector result (temperature.size());
 
 	double er24 = ER24_20(0);
 	for(int i = 0; i < temperature.size(); ++i) {
@@ -69,9 +72,9 @@ Rcpp::NumericVector inSituER(const Rcpp::NumericVector &temperature,
 //' @return computed rearation flux
 //' @export
 // [[Rcpp::export]]
-Rcpp::NumericVector computeRF(const Rcpp::NumericVector &temp, 
-		const Rcpp::NumericVector &pressure, const Rcpp::NumericVector &DO, 
-		const Rcpp::NumericVector &k600) {
+NumericVector computeRF(const NumericVector &temp, 
+		const NumericVector &pressure, const NumericVector &DO, 
+		const NumericVector &k600) {
 	// check vector dimensions
 	if(temp.size() != pressure.size() || temp.size() != DO.size())
 		throw std::length_error("temp, pressure, and DO must all be the same length");
@@ -81,7 +84,7 @@ Rcpp::NumericVector computeRF(const Rcpp::NumericVector &temp,
 	check_DO(DO);
 	check_k(k600);
 
-	Rcpp::NumericVector result (temp.size());
+	NumericVector result (temp.size());
 	double k = k600(0);
 	for(int i = 0; i < temp.size(); ++i) {
 		if(k600.size() > 1)
@@ -103,11 +106,11 @@ Rcpp::NumericVector computeRF(const Rcpp::NumericVector &temp,
 //'    Methods, 5, 145–155.
 //' @return k at the given temperature (m/day)
 // [[Rcpp::export]]
-Rcpp::NumericVector kT(const Rcpp::NumericVector &temp, const Rcpp::NumericVector &k600) {
+NumericVector kT(const NumericVector &temp, const NumericVector &k600) {
 	if(temp.size() != k600.size())
 		throw std::length_error("kT input vectors must have the same length");
 
-	Rcpp::NumericVector result (temp.size());
+	NumericVector result (temp.size());
 	for(int i = 0; i < temp.size(); ++i) {
 		result(i) = NSM::kT(temp(i), k600(i));
 	}
@@ -128,12 +131,12 @@ Rcpp::NumericVector kT(const Rcpp::NumericVector &temp, const Rcpp::NumericVecto
 //'     		Oceanogr., 25(4):662-671
 //' @return oxygen saturation concentration at given temperature and pressure
 // [[Rcpp::export]]
-Rcpp::NumericVector osat(const Rcpp::NumericVector &temp, const Rcpp::NumericVector &P) {
+NumericVector osat(const NumericVector &temp, const NumericVector &P) {
 	if(temp.size() != P.size())
 		throw std::length_error("osat input vectors must have the same length");
 	check_pressure(P);
 
-	Rcpp::NumericVector result (temp.size());
+	NumericVector result (temp.size());
 	for(int i = 0; i < temp.size(); ++i) {
 		result(i) = NSM::osat(temp(i), P(i));
 	}
@@ -168,19 +171,19 @@ Rcpp::NumericVector osat(const Rcpp::NumericVector &temp, const Rcpp::NumericVec
 //'		GPP (daily GPP), and ER (daily in-situ ER)
 // [[Rcpp::export]]
 Rcpp::List pixelMetabolism(const Rcpp::DataFrame &pixdf,  
-			const Rcpp::NumericMatrix &light, const Rcpp::NumericMatrix &temperature, 
-			const Rcpp::NumericMatrix &pressure, const Rcpp::NumericVector &lP1, 
-			const Rcpp::NumericVector &lP2, const Rcpp::NumericVector &er24_20, 
-			const Rcpp::NumericVector &k600, double dt = 10) {
+			const NumericMatrix &light, const NumericMatrix &temperature, 
+			const NumericMatrix &pressure, const NumericVector &lP1, 
+			const NumericVector &lP2, const NumericVector &er24_20, 
+			const NumericVector &k600, double dt = 10) {
 
-	std::vector<NSM::param_ptr> par_vector = NSM::param_from_r(lP1, lP2, er24_20, k600);
-	std::vector<NSM::Pixel> pixes = 
+	vector<shared_ptr<Params> > par_vector = NSM::param_from_r(lP1, lP2, er24_20, k600);
+	vector<NSM::Pixel> pixes = 
 		NSM::dfToPixel(pixdf, light, temperature, pressure, par_vector, dt);
 
 	// compute metab for all
-	Rcpp::NumericMatrix dailyGPP (light.nrow(), pixes.at(0).ndays());
-	Rcpp::NumericMatrix dailyER (light.nrow(), pixes.at(0).ndays());
-	Rcpp::NumericMatrix dissOx (light.nrow(), light.ncol());
+	NumericMatrix dailyGPP (light.nrow(), pixes.at(0).ndays());
+	NumericMatrix dailyER (light.nrow(), pixes.at(0).ndays());
+	NumericMatrix dissOx (light.nrow(), light.ncol());
 	for(int p = 0; p < pixes.size(); ++p) {
 		NSM::Pixel &pix = pixes.at(p);
 		pix.simulate_os();
@@ -201,17 +204,17 @@ Rcpp::List pixelMetabolism(const Rcpp::DataFrame &pixdf,
 //' @rdname pixelMetabolism
 //' @return Matrix; computed GPP for each pixel
 // [[Rcpp::export]]
-Rcpp::NumericMatrix pixelGPP(const Rcpp::DataFrame &pixdf,  
-			const Rcpp::NumericMatrix &light, const Rcpp::NumericMatrix &temperature, 
-			const Rcpp::NumericMatrix &pressure, const Rcpp::NumericVector &lP1, 
-			const Rcpp::NumericVector &lP2, const Rcpp::NumericVector &er24_20, 
-			const Rcpp::NumericVector &k600, double dt = 10) {
+NumericMatrix pixelGPP(const Rcpp::DataFrame &pixdf,  
+			const NumericMatrix &light, const NumericMatrix &temperature, 
+			const NumericMatrix &pressure, const NumericVector &lP1, 
+			const NumericVector &lP2, const NumericVector &er24_20, 
+			const NumericVector &k600, double dt = 10) {
 
-	std::vector<NSM::param_ptr> par_vector = NSM::param_from_r(lP1, lP2, er24_20, k600);
-	std::vector<NSM::Pixel> pixes = 
+	vector<shared_ptr<Params> > par_vector = NSM::param_from_r(lP1, lP2, er24_20, k600);
+	vector<NSM::Pixel> pixes = 
 		NSM::dfToPixel(pixdf, light, temperature, pressure, par_vector, dt);
 
-	Rcpp::NumericMatrix result (light.nrow(), light.ncol());
+	NumericMatrix result (light.nrow(), light.ncol());
 	for(int t = 0; t < light.ncol(); ++t) {
 		for(int p = 0; p < pixes.size(); ++p) {
 			result(p, t) = pixes.at(p).gpp(t);
@@ -223,17 +226,17 @@ Rcpp::NumericMatrix pixelGPP(const Rcpp::DataFrame &pixdf,
 //' @rdname pixelMetabolism
 //' @return Matrix; computed ER for each pixel
 // [[Rcpp::export]]
-Rcpp::NumericMatrix pixelER(const Rcpp::DataFrame &pixdf,  
-			const Rcpp::NumericMatrix &light, const Rcpp::NumericMatrix &temperature, 
-			const Rcpp::NumericMatrix &pressure, const Rcpp::NumericVector &lP1, 
-			const Rcpp::NumericVector &lP2, const Rcpp::NumericVector &er24_20, 
-			const Rcpp::NumericVector &k600, double dt = 10) {
+NumericMatrix pixelER(const Rcpp::DataFrame &pixdf,  
+			const NumericMatrix &light, const NumericMatrix &temperature, 
+			const NumericMatrix &pressure, const NumericVector &lP1, 
+			const NumericVector &lP2, const NumericVector &er24_20, 
+			const NumericVector &k600, double dt = 10) {
 	
-	std::vector<NSM::param_ptr> par_vector = NSM::param_from_r(lP1, lP2, er24_20, k600);
-	std::vector<NSM::Pixel> pixes = 
+	vector<shared_ptr<Params> > par_vector = NSM::param_from_r(lP1, lP2, er24_20, k600);
+	vector<NSM::Pixel> pixes = 
 		NSM::dfToPixel(pixdf, light, temperature, pressure, par_vector, dt);
 
-	Rcpp::NumericMatrix result (light.nrow(), light.ncol());
+	NumericMatrix result (light.nrow(), light.ncol());
 	for(int t = 0; t < light.ncol(); ++t) {
 		for(int p = 0; p < pixes.size(); ++p) {
 			result(p, t) = pixes.at(p).er(t);
