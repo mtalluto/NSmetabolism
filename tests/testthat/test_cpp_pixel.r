@@ -1,6 +1,6 @@
 context("Pixel functions")
 library("NSmetabolism")
-library("WatershedTools")
+suppressWarnings(library("WatershedTools"))
 
 test_that("Pixel-based metabolism", {
 	ws <- readRDS(system.file("testdata/testWS.rds", package="WatershedTools"))

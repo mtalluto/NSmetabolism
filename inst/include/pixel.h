@@ -8,62 +8,47 @@
 
 namespace NSM {
 	class Params;
+	class RData;
+	class Timeseries;
+	class DailyTimeseries;
 
 	class Pixel {
-	 	int _nt;  // number of time steps
-		int _dt;	// size of time steps, in minutes
-		int _timestep;
+		size_t _timestep;
 
-		std::shared_ptr<Params> _pars;
-		double _discharge; // m^3/sec
-		double _depth; // in m
-		double _width; // in m
-		double _length; // in m
-		double _lateral_do; // in g/m^3
-
-	// 	// eventually provide a friend class LightArray that does the heavy lifting;
-	// 	// accessed with light(id, time); thus can abstract all the spatial crap
-		std::shared_ptr<std::vector<double> > _light; 
-		std::shared_ptr<std::vector<double> > _temperature; 
-		std::shared_ptr<std::vector<double> > _pressure;
-		std::vector<double> _DO;
-
-		std::vector<double> _gpp_days;
-		std::vector<double> _er_days;
+		const std::shared_ptr<Params> _pars;
+		const std::shared_ptr<RData> _data;
+		const std::shared_ptr<Timeseries> _ts_data;
+		std::unique_ptr<Timeseries> _DO;
+		std::unique_ptr<DailyTimeseries> _daily_totals;
 
 	 	std::unordered_set<std::shared_ptr<Pixel> > _upstream;
 	
-		double _input_flux(int t) const;
-		double _ox_mass_flux(int t) const;
-		double _area() const {return _depth * _width;}
+		double _input_flux(size_t t) const;
+		double _ox_mass_flux(size_t t) const;
 
-		double rf(int t);
+		double rf(size_t t) const;
 
 	public:
-		void add_upstream(const std::shared_ptr<Pixel> p) {_upstream.insert(p);};
-		void simulate(bool cache = true);
-		double dDOdt(int t, bool cache = false);
-		void simulate_os(bool cache = true);
-		double dDOdt_os(int t, bool cache = false);
-		double gpp(int t);
-		double er(int t);
-		double advection(int t);
-		int ndays() {return (_nt * _dt) / (24*60);}
-		int day_from_t(int t) {return (t * _dt) / (24*60);}
+		void add_upstream(std::shared_ptr<Pixel> p) {_upstream.insert(p);};
+		void simulate();
+		double dDOdt(size_t t, bool cache = false);
+		void simulate_os();
+		double dDOdt_os(size_t t, bool cache = false);
+		double gpp(size_t t) const;
+		double er(size_t t) const;
+		double advection(size_t t) const;
+		unsigned dt() const; // size of time step, minutes
+		size_t nt() const; // number of time steps of size dt
+		size_t ndays() const; // number of days
 
-		const std::vector<double> & daily_gpp();
-		const std::vector<double> & daily_er();
-		const std::vector<double> & do_history();
+		std::vector<double> daily_gpp() const;
+		std::vector<double> daily_er() const;
+		std::vector<double> do_history() const;
 
-		Pixel (const std::shared_ptr<Params> &pars, double dt, double nt, double depth, 
-			double DO_init, const std::vector<double> &light, 
-			const std::vector<double> &temperature, const std::vector<double> &pressure);
-
-		Pixel (const std::shared_ptr<Params> &pars, double dt, double nt,
-			double discharge, double depth, double width, double length, double DO_init, 
-			double lateral, std::shared_ptr<std::vector<double> > light, 
-			std::shared_ptr<std::vector<double> > temperature, 
-			std::shared_ptr<std::vector<double> > pressure);
+		Pixel (std::shared_ptr<Params> pars, std::shared_ptr<RData> data, 
+			const Timeseries &ts);
+		Pixel (std::shared_ptr<Params> pars, std::shared_ptr<RData> data, 
+			std::shared_ptr<Timeseries> ts);
 	};
 
 

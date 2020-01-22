@@ -5,6 +5,7 @@
 
 using std::vector;
 using std::shared_ptr;
+using std::make_shared;
 using Rcpp::NumericMatrix;
 using Rcpp::NumericVector;
 
@@ -29,10 +30,8 @@ NSM::Reach::Reach(const Rcpp::DataFrame &pixData, const NumericMatrix &light,
 		const NumericMatrix &temperature, 
 		const NumericMatrix &pressure, const NSM::Params & pars, 
 		const NumericMatrix &topology, int bottom, int top, 
-		double lateral_do = 0, double dt = 10) : Reach(pars)
+		double dt = 10) : Reach(pars)
 {
-	_lateral_do = lateral_do;
-
 	int npix = light.nrow();
 	int nt = light.ncol();
 
@@ -41,24 +40,14 @@ NSM::Reach::Reach(const Rcpp::DataFrame &pixData, const NumericMatrix &light,
 	if(temperature.ncol() != nt || pressure.ncol() != nt)
 		throw std::length_error("Light, temperature, and pressure must have the same ncol");
 
-	// First pass, set up pixel data frame
-	Rcpp::IntegerVector pid = pixData["id"];
-	NumericVector pQ = pixData["discharge"];
-	NumericVector pZ = pixData["depth"];
-	NumericVector pW = pixData["width"];
-	NumericVector pDX = pixData["length"];
-	NumericVector pDO = pixData["DO_i"];
+	// First pass, set up pixels
+	auto data = data_from_r(pixData);
 	for(int p = 0; p < npix; ++p) {
-		const NumericVector lv = light.row(p);
-		const NumericVector tv = temperature.row(p);
-		const NumericVector pv = pressure.row(p);
-		shared_ptr<vector<double> > L (new vector<double>(Rcpp::as<vector<double> >(lv)));
-		shared_ptr<vector<double> > T (new vector<double>(Rcpp::as<vector<double> >(tv)));
-		shared_ptr<vector<double> > P (new vector<double>(Rcpp::as<vector<double> >(pv)));
+		auto ts = make_shared<NSM::Timeseries> (dt, "light", light.row(p));
+		ts->insert("temperature", temperature.row(p));
+		ts->insert("pressure", pressure.row(p));
 
-		shared_ptr<NSM::Pixel> pix (new NSM::Pixel(_pars, dt, nt, 
-			pQ.at(p), pZ.at(p), pW.at(p), pDX.at(p), pDO.at(p), _lateral_do, L, T, P));
-		_pixels[pid.at(p)] = pix;
+		_pixels[data.at(p)->id] = make_shared<NSM::Pixel> (_pars, data.at(p), ts);
 	}
 
 	// second pass, set topology
@@ -72,11 +61,8 @@ NSM::Reach::Reach(const Rcpp::DataFrame &pixData, const NumericMatrix &light,
 }
 
 
-NSM::Reach::Reach(const NSM::Params & p) : Reach()
+NSM::Reach::Reach(const NSM::Params & p)
 {
 	_pars = (shared_ptr<NSM::Params> (new NSM::Params(p)));
 }
 
-NSM::Reach::Reach() : _light(new vector<double>), _temperature(new vector<double>),
-	_pressure(new vector<double>)
-{}
