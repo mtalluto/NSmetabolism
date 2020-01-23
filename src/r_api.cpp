@@ -6,9 +6,11 @@
 #include "../inst/include/check.h"
 #include "../inst/include/params.h"
 #include "../inst/include/pixel.h"
+#include "../inst/include/reach.h"
 
 using std::shared_ptr;
 using std::vector;
+using std::make_shared;
 using Rcpp::NumericVector;
 using Rcpp::NumericMatrix;
 using NSM::Params;
@@ -145,8 +147,36 @@ NumericVector osat(const NumericVector &temp, const NumericVector &P) {
 
 
 
+// returns: DO time series for each pixel (NumericMatrix)
+// 			Daily GPP, ER for each pixel (2 Numeric Matrices)
+//			Daily Total GPP and ER for the whole reach (Named NumericMatrix)
+// params must be NAMED with lP1, lP2, er24_20, k600
+Rcpp::List reachMetabolism(const Rcpp::DataFrame &pixdf,  
+			const NumericMatrix &light, const NumericMatrix &temperature, 
+			const NumericMatrix &pressure, const NumericVector &params, 
+			const Rcpp::IntegerMatrix &topology, int dt) {
+	size_t np = pixdf.nrow();
+	if(np != light.nrow() || np != temperature.nrow() || np != pressure.nrow())
+		throw std::out_of_range("All data must have the same number of rows");
 
+	shared_ptr<NSM::Params> pars = make_shared<NSM::Params>(params);
 
+	// build time series datasets
+	vector<shared_ptr<NSM::Timeseries> > ts;
+	for(size_t p = 0; p < np; ++p) {
+		ts.push_back(make_shared<NSM::Timeseries> (dt, "light", light.row(p)));
+		ts.back()->insert("temperature", temperature.row(p));
+		ts.back()->insert("pressure", pressure.row(p));		
+	}
+
+	// construct the reach
+	NSM::Reach reach (pars, pixdf, ts, topology);
+
+	Rcpp::List result;
+
+	return result;
+
+}
 
 //' @name pixelMetabolism
 //' @aliases pixelGPP

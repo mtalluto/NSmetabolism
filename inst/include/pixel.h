@@ -40,6 +40,8 @@ namespace NSM {
 		unsigned dt() const; // size of time step, minutes
 		size_t nt() const; // number of time steps of size dt
 		size_t ndays() const; // number of days
+		int id() const;
+		const std::unordered_set<std::shared_ptr<Pixel> > &upstream() const {return _upstream;}
 
 		std::vector<double> daily_gpp() const;
 		std::vector<double> daily_er() const;

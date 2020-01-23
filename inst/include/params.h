@@ -23,6 +23,7 @@ namespace NSM {
 
 		Params(const Params &p);
 		Params(double lp1, double lp2, double er, double k);
+		Params(const Rcpp::NumericVector &p);
 	};
 
 

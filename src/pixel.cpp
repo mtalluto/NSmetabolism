@@ -167,7 +167,7 @@ vector<double> NSM::Pixel::do_history() const {
 unsigned NSM::Pixel::dt() const {return _ts_data->dt();}
 size_t NSM::Pixel::nt() const {return _ts_data->nt();}
 size_t NSM::Pixel::ndays() const {return _daily_totals->nt();}
-
+int NSM::Pixel::id() const {return _data->id;}
 
 /*
  	CONSTRUCTORS

@@ -12,6 +12,9 @@ NSM::Params::Params(double lp1, double lp2, double er, double k) : lP1(lp1), lP2
 	er24_20(er), k600(k)
 {}
 
+NSM::Params::Params(const NumericVector &p) : Params(p("lP1"), p("lP2"), p("er24_20"), p("k600"))
+{}
+
 // NSM::Params& NSM::Params::operator= (const Params& rhs) {
 // 	lP1 = rhs.lP1;
 // 	lP2 = rhs.lP2;
