@@ -4,14 +4,14 @@ library("NSmetabolism")
 test_that("New minidots are parsed correctly", {
 	expect_silent(dat <- read_minidot(system.file("testdata/minidot_new", 
 		package="NSmetabolism")))
-	expect_equal(ncol(dat), 5)
+	expect_equal(ncol(dat), 6)
 	expect_equal(nrow(dat), 145*3) # 145 rows in 3 files
 })
 
 test_that("Old minidots are parsed correctly", {
 	expect_silent(dat <- read_minidot(system.file("testdata/minidot_old", 
 		package="NSmetabolism")))
-	expect_equal(ncol(dat), 5)
+	expect_equal(ncol(dat), 6)
 	expect_equal(nrow(dat), 36*5) # 36 rows in 5 files
 })
 
