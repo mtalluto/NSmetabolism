@@ -26,7 +26,10 @@ read_minidot <- function(fname, skip = 3, ...)
 
 	colnames(dat) <- c('time_sec', 'temperature', 'DO', 'q')
 	dat$timestamp <- as.POSIXct(dat[[1]], origin="1970-01-01")
-	dat$serialNumber <- readLines(files[1], n=1)
+	sn <- readLines(files[1], n=1)
+	if(length(sn) == 0)
+		sn <- NA
+	dat$serialNumber <- NA
 	dat
 }
 
