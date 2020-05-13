@@ -1,6 +1,6 @@
 Package: NSmetabolism
 Title: N-Station Stream Metabolism Modelling
-Version: 0.5.3.9001
+Version: 0.6.0
 Authors@R: 
     person(given = "Matthew",
            family = "Talluto",
@@ -10,11 +10,15 @@ Description: Implements a stream metabolism model for estimating gross primary p
 License: MIT + file "Licence"
 Encoding: UTF-8
 LazyData: true
+Depends:
+    R (>= 3.5.0)
 Imports:
     lubridate,
+    methods,
     raster,
-    sp,
-    Rcpp
+    Rcpp (>= 0.12.0),
+    rstan (>= 2.18.1),
+    sp
 Suggests: 
     testthat,
     data.table,
@@ -22,8 +26,7 @@ Suggests:
     deSolve,
     mvtnorm,
     WatershedTools,
-    Matrix,
-    rstan
+    Matrix
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 6.1.1
 LinkingTo: 

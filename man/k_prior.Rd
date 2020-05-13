@@ -23,7 +23,7 @@ k_prior(slope, velocity, depth = NA, discharge = NA, eqn = 1:7,
 \value{
 If a single equations is given, a 2-column matrix giving the mean and standard
 deviation for k for each value in slope, velocity, etc. Otherwise a list of such matrices,
-one for each equation in eqn.
+one for each equation in eqn. Units for k are meters/day
 }
 \description{
 Generate prior distributions for k using stream geometry

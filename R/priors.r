@@ -36,7 +36,7 @@
 #' 
 #' @return If a single equations is given, a 2-column matrix giving the mean and standard
 #'   deviation for k for each value in slope, velocity, etc. Otherwise a list of such matrices,
-#'   one for each equation in eqn.
+#'   one for each equation in eqn. Units for k are meters/day
 #' @references Raymond, P.A. et al. (2012). Scaling the gas transfer velocity and hydraulic
 #' 		 geometry in streams and small rivers. Limnol. Oceanogr., 2, 41–53.
 #' @examples
