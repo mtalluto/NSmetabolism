@@ -1,6 +1,6 @@
 Package: NSmetabolism
 Title: N-Station Stream Metabolism Modelling
-Version: 0.5.3
+Version: 0.5.3.9001
 Authors@R: 
     person(given = "Matthew",
            family = "Talluto",
