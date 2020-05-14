@@ -1,7 +1,7 @@
 context("IDW")
 library("NSmetabolism")
 
-test_that("IDW works on single and multiple input values", {
+test_that("IDW-river works on single and multiple input values", {
 	q <- c(1, 5, 6, 10, 16)
 	dist <- matrix(c(
 		 0, NA, -1, NA, -2,
@@ -31,4 +31,11 @@ test_that("IDW works on single and multiple input values", {
 	wt <- wt/sum(wt)
 	expect_equal(newVals[3], sum(vals[i] * wt))
 	expect_equal(newVals[4], vals[5]) # 5 is the only neighbor, so they are equal
+})
+
+test_that("Regular IDW", {
+	vals = matrix(c(5,10, 1, 3, 2, 4), nrow=2) 
+	dmat = c(1, 10)
+	expect_error(idw_matrix(vals, dmat[1]), regex="length")
+	expect_error(idw_matrix(vals, dmat), regex=NA)
 })

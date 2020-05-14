@@ -12,3 +12,27 @@ test_that("Pressure is computed right from elevation", {
 test_that("Conversion to atm works", {
 	expect_equal(hPaToAtm(1013.25), 1, tol = 0.01)
 })
+
+test_that("Pressure conversion", {
+	pr_meas = c(1000, 1100)
+	elev_meas = c(100, 200)
+	elev_out = 1000
+	
+	# errors
+	expect_error(pressureCorrection(pr_meas, elev_meas[1], elev_out), regex = "length")
+	
+	# sigle point should work fine
+	expect_error(one <- pressureCorrection(pr_meas[1], elev_meas[1], elev_out), regex=NA)
+	expect_equal(length(one), 1)
+	expect_true(one > 875 & one < 900)
+	
+	# multiple pts
+	expect_error(two <- pressureCorrection(pr_meas, elev_meas, elev_out), regex = NA)
+	expect_equal(length(two), length(pr_meas))
+	expect_true(all(two < pr_meas))
+	
+	# same elevation yields same pressure
+	expect_error(same <- pressureCorrection(pr_meas[1], elev_meas[1], elev_meas[1]), regex=NA)
+	expect_equal(same, pr_meas[1])
+	
+})

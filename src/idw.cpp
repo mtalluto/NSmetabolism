@@ -6,6 +6,43 @@
 using namespace Rcpp;
 using std::vector;
 
+//' Inverse distance weighted interpolation
+//'
+//' @details Interpolation is done assuming locations are in the rows of vals. Thus, if vals
+//' is an n by m matrix, each of the m output values will be the inverse distance weighted 
+//' average for the n sites
+//'
+//' @param vals A location-by-value matrix
+//' @param dist Distance to each value
+//' @param pow Power to use for distance
+//' @return The inverse distance weighted average of vals
+//' @export
+// [[Rcpp::export]]
+NumericVector idw_matrix(const NumericMatrix &vals, NumericVector dist, double pow = 2) {
+	if(vals.nrow() != dist.size())
+		stop("length(dist) must equal nrow(vals)");
+
+	// convert distances to weights
+	std::vector<double> wt;
+	{
+		double sumwt = 0;
+		for(int i = 0; i < dist.size(); ++i) {
+			wt.push_back(1/std::pow(dist[i], pow));
+			sumwt += wt[i];
+		}
+		for(auto &w : wt)
+			w = w / sumwt;
+	}
+	
+	NumericVector result (vals.ncol(), 0.0);
+
+	for(int i = 0; i < vals.ncol(); ++i) {
+		for(int j = 0; j < vals.nrow(); ++j)
+			result[i] += wt[j] * vals(j,i);
+	}
+	return result;
+}
+
 /**
 	*' Compute the average of x, weighted by w
 */

@@ -6,15 +6,28 @@
 using namespace Rcpp;
 
 // pressureCorrection
-double pressureCorrection(double P, double elev, double newElev);
+Rcpp::NumericVector pressureCorrection(Rcpp::NumericVector P, Rcpp::NumericVector elev, double newElev);
 RcppExport SEXP _NSmetabolism_pressureCorrection(SEXP PSEXP, SEXP elevSEXP, SEXP newElevSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< double >::type P(PSEXP);
-    Rcpp::traits::input_parameter< double >::type elev(elevSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type P(PSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type elev(elevSEXP);
     Rcpp::traits::input_parameter< double >::type newElev(newElevSEXP);
     rcpp_result_gen = Rcpp::wrap(pressureCorrection(P, elev, newElev));
+    return rcpp_result_gen;
+END_RCPP
+}
+// idw_matrix
+NumericVector idw_matrix(const NumericMatrix& vals, NumericVector dist, double pow);
+RcppExport SEXP _NSmetabolism_idw_matrix(SEXP valsSEXP, SEXP distSEXP, SEXP powSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const NumericMatrix& >::type vals(valsSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type dist(distSEXP);
+    Rcpp::traits::input_parameter< double >::type pow(powSEXP);
+    rcpp_result_gen = Rcpp::wrap(idw_matrix(vals, dist, pow));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -125,6 +138,7 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_NSmetabolism_pressureCorrection", (DL_FUNC) &_NSmetabolism_pressureCorrection, 3},
+    {"_NSmetabolism_idw_matrix", (DL_FUNC) &_NSmetabolism_idw_matrix, 3},
     {"_NSmetabolism_idw_river", (DL_FUNC) &_NSmetabolism_idw_river, 4},
     {"_NSmetabolism_computeInputDOFlux", (DL_FUNC) &_NSmetabolism_computeInputDOFlux, 4},
     {"_NSmetabolism_computeAdvection", (DL_FUNC) &_NSmetabolism_computeAdvection, 3},

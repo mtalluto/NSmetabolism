@@ -1,6 +1,6 @@
 Package: NSmetabolism
 Title: N-Station Stream Metabolism Modelling
-Version: 0.6.0
+Version: 0.6.0.9001
 Authors@R: 
     person(given = "Matthew",
            family = "Talluto",
@@ -18,9 +18,10 @@ Imports:
     raster,
     Rcpp (>= 0.12.0),
     rstan (>= 2.18.1),
-    sp
+    sp,
+    sf (>= 0.8.1)
 Suggests: 
-    testthat,
+    testthat (>= 2.1.0),
     data.table,
     rgrass7,
     deSolve,
