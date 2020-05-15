@@ -34,5 +34,4 @@ test_that("Pressure conversion", {
 	# same elevation yields same pressure
 	expect_error(same <- pressureCorrection(pr_meas[1], elev_meas[1], elev_meas[1]), regex=NA)
 	expect_equal(same, pr_meas[1])
-	
 })
