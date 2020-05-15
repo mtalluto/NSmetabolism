@@ -41,6 +41,9 @@ irradiance <- function(dem, output_points, times, timezone, use_existing = FALSE
 	if(!requireNamespace('WatershedTools')) 
 		stop("The WatershedTools package must be installed to use this function")
 
+	if(is(output_points, "sf"))
+		output_points = as(output_points, "Spatial")
+
 	if(newSession || nchar(Sys.getenv("GISRC")) == 0) {
 		gs <- WatershedTools::GrassSession(dem, gisBase, dem_name, override = TRUE)
 	}
