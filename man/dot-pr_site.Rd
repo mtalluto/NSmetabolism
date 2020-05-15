@@ -4,7 +4,7 @@
 \alias{.pr_site}
 \title{get a vector of pressure for a single site}
 \usage{
-.pr_site(pr, st, si, times)
+.pr_site(pr, st, si, times, stn_id, site_id, ...)
 }
 \description{
 get a vector of pressure for a single site

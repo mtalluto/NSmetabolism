@@ -4,7 +4,8 @@
 \alias{interpolate_air_pressure}
 \title{Interpolate air pressure for metabolism models}
 \usage{
-interpolate_air_pressure(pressure, stations, out_sites, out_times)
+interpolate_air_pressure(pressure, stations, out_sites, out_times,
+  parallel = TRUE, stn_id = "station", site_id = "site", ...)
 }
 \arguments{
 \item{pressure}{Data.frame required columns are 'station' 'pressure' (hPa), 'time' (see details)}
@@ -13,9 +14,21 @@ interpolate_air_pressure(pressure, stations, out_sites, out_times)
 
 \item{out_sites}{Spatial (sp or sf) object with output locations, 'elevation' is a required
 column}
+
+\item{out_times}{A list, with one element per out_site; each element is a vector of type
+POSIXct giving times at which to compute pressure}
+
+\item{parallel}{Boolean, should we use multiple threads to speed computation? Mac/Linux only}
+
+\item{stn_id}{Character, the column name where pressure station names are stored in both
+\code{pressure} and \code{stations}}
+
+\item{site_id}{Character or numeric, the column in out_sites where site names are stored}
+
+\item{...}{Additional parameters to pass to \code{\link[=approx]{approx()}}.}
 }
 \value{
-A matrix, one row per output site and one column per output time
+A data frame with three columns: site name, time, and interpolated pressure
 }
 \description{
 In many cases we don't have air pressure precisely at the locations where other stream
@@ -25,12 +38,12 @@ in the rows, output times in the columns.
 }
 \details{
 \code{pressure} must be a data.frame with at least 3 columns, named:
-* 'station', a station name or id number, corresponding to the same column in \code{stations}
+* 'station' (by default, or the value assigned to stn_id), station name
 * 'pressure', pressure observations (hPa)
 * 'time', a POSIXct column giving the times of measurements
 
 \code{stations}: Spatial object, in addition to locations has at least 2 columns, named:
-* 'station', a station name or id number, corresponding to the same column in \code{pressure}
+* 'station' (by default, or the value assigned to stn_id), station name
 * 'elevation', Elevation (m) of the station
 
 It is recommended that the input air pressure data represent a continuous record with no
