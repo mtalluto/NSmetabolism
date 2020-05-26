@@ -59,6 +59,78 @@ interpolate_air_pressure = function(pressure, stations, out_sites, out_times,
 }
 
 
+#' Produce a summary from a list of one-station fits
+#' 
+#' If many fits are involved, memory usage can be extreme when providing `fits` instead of
+#' `files.` It is recommended instead to save fits one at a time
+#' 
+#' If `diss_o` is provided, then the model root mean square error and the pearson correlation
+#' (predicted vs calibration) will also be included
+#' 
+#' @param fits A list of onestation fits, required if `files` is not specified
+#' @param files A vector or list of filenames with .rds files of onestation fits, required if
+#' 		`fits` is not specified
+#' @param diss_o Optional, a list of vectors with one element per element in fits and files. 
+#' 		Contains the dissolved oxygen time series used to fit each model.
+#' @export
+osm_summarize = function(fits, files, diss_o) {
+	if((missing(fits) & missing(files)) | (!missing(fits) & !missing(files)))
+		stop("Exactly one of fits or files must be provided")
+	
+	if(missing(diss_o))
+		diss_o = NA
+	
+	if(missing(fits)) {
+		res = mapply(function(x, oxy) {
+			fit = readRDS(x)
+			.osm_summarize_single(fit, basename(x), oxy)
+		}, files, diss_o, SIMPLIFY = FALSE)
+	} else {
+		res = mapply(.osm_summarize_single, fit = fits, name = names(fits), diss_o = diss_o,
+					 SIMPLIFY = FALSE)
+	}
+	data.table::rbindlist(res)
+}
+
+
+#' Summarize a single onestation fit
+#' @param fit A onestation fit
+#' @param name Model name
+#' @param diss_o Optional, DO time series used to fit the model
+#' @keywords internal
+.osm_summarize_single = function(fit, name, diss_o) {
+	if(is.na(nrow(fit))) {
+		warning(name, " contains no samples")
+		return(NULL)	
+	}	
+	
+	params = c("lP1", "lP2", "ER24_20", "k600", "gpp", "er", "sigma")
+	samples = as.matrix(fit, pars = params)
+	samples[, c("lP1", "lP2")] = exp(samples[, c("lP1", "lP2")])
+	colnames(samples)[colnames(samples) %in% c("lP1", "lP2")] = c("P1", "P2")
+	
+	if(!is.na(diss_o)) {
+		do_pr = as.matrix(fit, pars="DO_pr")
+		do_rmse = apply(do_pr, 1, .rmse, fit = diss_o)
+		do_cor = apply(do_pr, 1, cor, y = diss_o, use = "complete.obs")
+		samples = cbind(samples, rmse = do_rmse, pearson = do_cor)
+	}
+	
+	data.table::data.table(
+		file = name,
+		parameter = colnames(samples),
+		mean = apply(samples, 2, mean),
+		median = apply(samples, 2, median),
+		se = apply(samples, 2, sd),
+		q0.05 = apply(samples, 2, quantile, 0.05, na.rm = TRUE),
+		q0.95 = apply(samples, 2, quantile, 0.95, na.rm = TRUE))
+}
+
+#' Root mean square error
+#' @keywords internal
+.rmse = function(predict, fit) sqrt(mean((predict - fit)^2))
+
+
 #' get a vector of pressure for a single site
 #' @keywords internal
 .pr_site = function(pr, st, si, times, stn_id, site_id, ...) {

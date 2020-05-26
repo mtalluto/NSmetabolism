@@ -38,3 +38,4 @@ rsconnect/
 # c++ compiled objects 
 *.o
 *.so
+.Rproj.user
