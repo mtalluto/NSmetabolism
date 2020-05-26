@@ -92,6 +92,50 @@ osm_summarize = function(fits, files, diss_o) {
 	data.table::rbindlist(res)
 }
 
+#' Produces a variety of plots for one station models
+#' @param fit A onestation model fit
+#' @param oxy Dissolved oxygen data, required for `type=fit`
+#' @param times Optional, vector of times at which oxy was measured
+#' @param type The type of plot to produce
+#' @return A ggplot object
+osm_plot = function(fit, oxy, times, type = c("fit", "trace", "density")) {
+	type = match.arg(type)
+	if(is.na(nrow(fit))) {
+		warning(modname, " contains no samples")
+		return(NULL)	
+	}
+	if(type == "fit") {
+		samples = as.matrix(fit, pars="DO_pr")
+		if(missing(times))
+			times = seq_along(oxy)
+		do_pts = data.frame(time = times, oxy = oxy)
+		pl_data = data.table::data.table(median = apply(samples, 2, median), 
+										 lower = apply(samples, 2, quantile, 0.05),
+										 upper = apply(samples, 2, quantile, 0.95), 
+										 times = times)
+		pl = ggplot(pl_data, aes(x = times, y = median)) + 
+			geom_ribbon(aes(min = lower, max = upper), fill = '#a6cee3', alpha = 0.6) + 
+			geom_line(col = '#1f78b4', size = 0.3) + 
+			geom_point(data = do_pts, aes(x = times, y = oxy), size = 0.4, col = "#fb9a99") + 
+			ylab(expression(Dissolved~Oxygen~(g/m^3))) + xlab("Time")
+	} else {
+		if(!requireNamespace("bayesplot", quitely=TRUE))
+			stop("Package 'bayesplot' is required for this function, ",
+				 "please install it and try again")
+		params = c("lP1", "lP2", "ER24_20", "k600", "gpp", "er", "sigma")
+		samples = as.array(fit, pars = params)
+		if(type == 'trace') {
+			pl = bayesplot::mcmc_trace(samples)
+		} else if(type == "density") {
+			pl = bayesplot::mcmc_dens(samples)
+		} else {
+			stop("Type ", type, " is not implemented")
+		}
+	}
+	return(pl)
+}
+
+
 
 #' Summarize a single onestation fit
 #' @param fit A onestation fit
