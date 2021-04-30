@@ -4,8 +4,15 @@
 \alias{oneStation_DOPredict}
 \title{Predict a time series of dissolved oxygen concentration}
 \usage{
-oneStation_DOPredict(initial, times, params, data, dt = 1,
-  method = c("euler", "lsoda"), gpp = FALSE)
+oneStation_DOPredict(
+  initial,
+  times,
+  params,
+  data,
+  dt = 1,
+  method = c("euler", "lsoda"),
+  gpp = FALSE
+)
 }
 \arguments{
 \item{initial}{initial dissolved oxygen concentration}

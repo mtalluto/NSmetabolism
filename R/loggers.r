@@ -38,12 +38,14 @@ read_minidot <- function(fname, skip = 3, ...)
 #' 
 #' @param fname file or directory name, see 'details'
 #' @param pattern grep-compatible search pattern for the filename if fname is a directory
+#' @param tformat A date/time format, following [lubridate::parse_date_time]
 #'
 #' @details If \code{fname} is a directory, then \code{pattern} is also required; this allows
 #'   choosing the hobo by name
-#' @return A [data.table::data.table] or `data.frame`
+#' @return A [data.table::data.table]
+#' @import data.table
 #' @export
-read_hobo <- function(fname, pattern)
+read_hobo <- function(fname, pattern, tformat = "dmyHMS")
 {
 	if(dir.exists(fname))
 	{
@@ -61,22 +63,18 @@ read_hobo <- function(fname, pattern)
 	} else {
 		stop("file not found: ", fname)
 	}
-	if(requireNamespace('data.table', quietly=TRUE))
-	{
-		dat <- data.table::fread(file)
-	} else {
-		dat <- read.csv(file)
-	}
-	
 
-	# we drop the row numnber and other columns as needed
-	dropCols <- c(1, grep("Host Connected|Coupler|Stopped|End of File", colnames(dat), ignore.case=TRUE))
-	dat[,dropCols] <- NULL
+	dat <- data.table::fread(file)
+
+	keepCols = grep("Date|Temp|Lux", colnames(dat), ignore.case=TRUE)
+	dat = dat[,..keepCols]
 
 	# process dates into a date format, fix time zone
 	datecol <- grep("Date", names(dat))
+	
+	
 	tz_add <- -1 * as.numeric(sub("^.+GMT([+-]\\d?\\d):.+", "\\1", names(dat)[datecol]))
-	dat$timestamp <- lubridate::parse_date_time(dat[[datecol]], orders="mdyIMSp") + lubridate::hours(tz_add)
+	dat$timestamp <- lubridate::parse_date_time(dat[[datecol]], orders=tformat) + lubridate::hours(tz_add)
 	dat[[datecol]] <- NULL
 
 	# capture the serial number, rename temperature column

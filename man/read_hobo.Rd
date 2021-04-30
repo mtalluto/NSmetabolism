@@ -4,15 +4,17 @@
 \alias{read_hobo}
 \title{Read hobo light/temperature logger data}
 \usage{
-read_hobo(fname, pattern)
+read_hobo(fname, pattern, tformat = "dmyHMS")
 }
 \arguments{
 \item{fname}{file or directory name, see 'details'}
 
 \item{pattern}{grep-compatible search pattern for the filename if fname is a directory}
+
+\item{tformat}{A date/time format, following \link[lubridate:parse_date_time]{lubridate::parse_date_time}}
 }
 \value{
-A \link[data.table:data.table]{data.table::data.table} or \code{data.frame}
+A \link[data.table:data.table]{data.table::data.table}
 }
 \description{
 Read hobo light/temperature logger data

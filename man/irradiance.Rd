@@ -4,11 +4,21 @@
 \alias{irradiance}
 \title{Produce a model of irradiance for an entire study area or selected control points}
 \usage{
-irradiance(dem, output_points, times, timezone, use_existing = FALSE,
-  dem_name = "dem", slope_name = "slope", aspect_name = "aspect",
-  lon_name = "longitude", horizon_pars = list(step = 30, bufferzone =
-  200, maxdistance = 5000, horBaseName = "horizonAngle"),
-  newSession = FALSE, gisBase)
+irradiance(
+  dem,
+  output_points,
+  times,
+  timezone,
+  use_existing = FALSE,
+  dem_name = "dem",
+  slope_name = "slope",
+  aspect_name = "aspect",
+  lon_name = "longitude",
+  horizon_pars = list(step = 30, bufferzone = 200, maxdistance = 5000, horBaseName =
+    "horizonAngle"),
+  newSession = FALSE,
+  gisBase
+)
 }
 \arguments{
 \item{dem}{A \link[sp:SpatialGridDataFrame]{sp::SpatialGridDataFrame} or \link[raster:RasterLayer]{raster::RasterLayer} object giving the digital

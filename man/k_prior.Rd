@@ -4,8 +4,7 @@
 \alias{k_prior}
 \title{Generate prior distributions for k using stream geometry}
 \usage{
-k_prior(slope, velocity, depth = NA, discharge = NA, eqn = 1:7,
-  nsim = 5000)
+k_prior(slope, velocity, depth = NA, discharge = NA, eqn = 1:7, nsim = 5000)
 }
 \arguments{
 \item{slope}{Stream slope (unitless; meters of height/meters of length)}

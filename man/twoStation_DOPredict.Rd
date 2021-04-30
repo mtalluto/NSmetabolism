@@ -4,8 +4,15 @@
 \alias{twoStation_DOPredict}
 \title{Predict a time series of dissolved oxygen concentration}
 \usage{
-twoStation_DOPredict(ws, initial, times, params, data, dt = 1,
-  method = c("euler", "lsoda"))
+twoStation_DOPredict(
+  ws,
+  initial,
+  times,
+  params,
+  data,
+  dt = 1,
+  method = c("euler", "lsoda")
+)
 }
 \arguments{
 \item{ws}{A \code{\link[WatershedTools:Watershed]{WatershedTools::Watershed()}} object, describing ONLY the two sites}

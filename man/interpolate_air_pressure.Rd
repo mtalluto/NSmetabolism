@@ -4,8 +4,16 @@
 \alias{interpolate_air_pressure}
 \title{Interpolate air pressure for metabolism models}
 \usage{
-interpolate_air_pressure(pressure, stations, out_sites, out_times,
-  parallel = TRUE, stn_id = "station", site_id = "site", ...)
+interpolate_air_pressure(
+  pressure,
+  stations,
+  out_sites,
+  out_times,
+  parallel = TRUE,
+  stn_id = "station",
+  site_id = "site",
+  ...
+)
 }
 \arguments{
 \item{pressure}{Data.frame required columns are 'station' 'pressure' (hPa), 'time' (see details)}

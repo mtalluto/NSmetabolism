@@ -4,8 +4,17 @@
 \alias{onestation}
 \title{Calibrate a single station metabolism model}
 \usage{
-onestation(oxy, temp, light, pressure, depth, dt, nsamples = 1000,
-  prior = list(), ...)
+onestation(
+  oxy,
+  temp,
+  light,
+  pressure,
+  depth,
+  dt,
+  nsamples = 1000,
+  prior = list(),
+  ...
+)
 }
 \arguments{
 \item{oxy}{Dissolved oxygen time series (g/L)}

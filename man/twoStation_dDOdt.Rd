@@ -46,9 +46,9 @@ including the following:
 }
 \references{
 Fuß, T. et al. (2017). Land use controls stream ecosystem metabolism by shifting
-dissolved organic matter and nutrient regimes. \emph{Freshw Biol} \strong{62}:582–599. \
+dissolved organic matter and nutrient regimes. \emph{Freshw Biol} \strong{62}:582–599. \\
 Van de Bogert MC et al. 2007. Assessing pelagic and benthic metabolism using free
-water measurements. \emph{Limnol. Oceanogr.: Methods} \strong{5}:145–155. \
+water measurements. \emph{Limnol. Oceanogr.: Methods} \strong{5}:145–155. \\
 Uehlinger, U., et al. 2000. Variability of photosynthesis‐irradiance curves and
 ecosystem respiration in a small river. \emph{Freshw Biol} \strong{44}:493–507.
 }
